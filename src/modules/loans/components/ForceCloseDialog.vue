@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import axios from 'axios'
-import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
+import { DialogContent, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
 import { messageOf, problemOf } from '@/api/http'
 import { hideLoader, showLoader, swalConfirm, swalNotification } from '@/utils/dialogs'
 import { loansApi } from '../api'
@@ -46,12 +46,14 @@ async function save() {
 </script>
 
 <template>
-  <DialogRoot v-model:open="open">
+  <!-- not modal: a modal dialog blocks clicks on the SweetAlert boxes this form opens over itself -->
+  <DialogRoot v-model:open="open" :modal="false">
     <DialogPortal>
-      <DialogOverlay class="fixed inset-0 z-40 bg-black/40" />
+      <div v-if="open" class="fixed inset-0 z-40 bg-black/40" aria-hidden="true" @click="open = false"></div>
       <DialogContent
         class="fixed left-1/2 top-12 z-50 w-[min(60rem,95vw)] -translate-x-1/2 rounded bg-white p-6 shadow-xl focus:outline-none"
         aria-describedby="undefined"
+        @interact-outside.prevent
       >
         <DialogTitle class="mb-3 text-base font-semibold text-project">Force Close Loan Accounts</DialogTitle>
         <div class="max-h-[550px] overflow-auto">
