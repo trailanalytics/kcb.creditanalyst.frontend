@@ -17,7 +17,7 @@ const items = computed<NavItem[]>(() => {
   ]
   if (auth.has('Sync T24')) list.push({ label: 'Configuration', to: '/t24' })
   if (auth.has('View Off Balance Sheet Items'))
-    list.push({ label: 'Off Balance Sheet Items', to: '/off-balance-sheet' })
+    list.push({ label: 'Off Balance Sheet Items', to: '/off-balance-sheet/items' })
   if (auth.isAdmin) list.push({ label: 'Admin Dashboard', to: '/admin' })
   return list
 })

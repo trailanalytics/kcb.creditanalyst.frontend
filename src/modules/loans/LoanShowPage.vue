@@ -5,6 +5,8 @@ import { messageOf } from '@/api/http'
 import { swalNotification } from '@/utils/dialogs'
 import { loansApi } from './api'
 import LoanHeaderCard from './components/LoanHeaderCard.vue'
+import SecurityActions from '@/modules/securities/components/SecurityActions.vue'
+import SecurityPanels from '@/modules/securities/components/SecurityPanels.vue'
 import type { LoanView } from './types'
 
 /** /loans/show/{id}: header with the key facts and the collapsible "Full Loan Details" (cba/show.blade.php). */
@@ -28,7 +30,7 @@ onMounted(async () => {
     <LoanHeaderCard :view="view">
       <template #actions>
         <RouterLink :to="`/loans/repayments/${view.loan.id}`" class="btn-outline">Repayments</RouterLink>
-        <!-- security actions slot: the Add Guarantors, Add Collateral and Add Stakeholder buttons belong to the securities module -->
+        <SecurityActions :context="{ type: 'loan', contractCode: view.loan.contractCode }" />
       </template>
     </LoanHeaderCard>
 
@@ -56,10 +58,6 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!--
-      security panels slot
-      The borrower's collateral, guarantor and stakeholder panels (with their attach/detach checkboxes and the add/edit modals)
-      go here. They are built by the securities module and are not part of the loan accounts slice.
-    -->
+    <SecurityPanels :context="{ type: 'loan', contractCode: view.loan.contractCode }" />
   </section>
 </template>

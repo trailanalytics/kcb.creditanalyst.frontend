@@ -50,7 +50,10 @@ const view = (extra: Partial<LoanView> = {}): LoanView =>
   }) as unknown as LoanView
 
 const mountPage = (component: typeof LoanShowPage | typeof RepaymentsPage) =>
-  mount(component, { props: { id: '3' }, global: { stubs: { RouterLink: RouterLinkStub } } })
+  mount(component, {
+    props: { id: '3' },
+    global: { stubs: { RouterLink: RouterLinkStub, SecurityActions: true, SecurityPanels: true } },
+  })
 
 describe('LoanShowPage', () => {
   beforeEach(() => vi.mocked(loansApi.view).mockReset())

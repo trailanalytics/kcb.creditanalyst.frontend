@@ -1,6 +1,11 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { PLACEHOLDERS } from './placeholders'
+import { loansRoutes } from '@/modules/loans/routes'
+import { securitiesRoutes } from '@/modules/securities/routes'
+import { chequeRoutes } from '@/modules/cheque/routes'
+import { fraudRoutes } from '@/modules/fraud/routes'
+import { institutionRoutes } from '@/modules/institution/routes'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -131,6 +136,11 @@ const routes: RouteRecordRaw[] = [
         props: true,
         meta: { title: 'Change Status', permission: 'Approve/Reject Applications' },
       },
+      ...loansRoutes,
+      ...securitiesRoutes,
+      ...chequeRoutes,
+      ...fraudRoutes,
+      ...institutionRoutes,
       ...placeholderRoutes.filter((r) => r.path !== '/admin/configuration'),
     ],
   },
