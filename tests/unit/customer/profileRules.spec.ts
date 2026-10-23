@@ -113,4 +113,24 @@ describe('profile validation', () => {
     expect(joint).toContain('SCI_CountyorTown')
     expect(joint).toContain('PCI_District')
   })
+
+  it('asks the embedded profile for the fields its form requires', () => {
+    const m = completeIndividual()
+    const embedded = requiredFields(m, { embedded: true })
+    expect(embedded).not.toContain('branchCode')
+    expect(embedded).not.toContain('classificationCode')
+    expect(embedded).not.toContain('PCI_CountyorTown')
+    expect(embedded).toContain('SCI_CountyorTown')
+    expect(embedded).toEqual(
+      expect.arrayContaining([
+        'GSCAFB_Surname',
+        'EI_PrimaryOccupation',
+        'joinedEmployerYear',
+        'II_CountryID',
+      ]),
+    )
+    // the national ID is required whatever country issued it
+    m.II_CountryOfIssue = 'KE'
+    expect(requiredFields(m, { embedded: true })).toContain('II_CountryID')
+  })
 })

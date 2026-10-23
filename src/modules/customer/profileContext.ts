@@ -7,6 +7,8 @@ export interface ProfileContext {
   invalid: Ref<string[]>
   /** Unique per rendered form (the joint screen shows several); used for element ids. */
   id: string
+  /** The profile embedded in another form: no client number, branch or classification rows. */
+  embedded: boolean
   set(name: string, value: string): void
 }
 

@@ -86,4 +86,15 @@ describe('ProfileForm', () => {
     expect(cap.wrapper.text()).not.toContain('Company Information')
     expect(cap.wrapper.find('[name="II_ValueAddedTaxNumber"]').exists()).toBe(false)
   })
+
+  it('leaves out client number, branch and classification when embedded, and does not copy the apartment name', async () => {
+    const { wrapper, model } = await mountForm('0', { embedded: true })
+    expect(wrapper.find('[name="branchCode"]').exists()).toBe(false)
+    expect(wrapper.find('[name="classificationCode"]').exists()).toBe(false)
+    expect(wrapper.find('input[placeholder="Client Number"]').exists()).toBe(false)
+    await wrapper.find('[name="PCI_UnitName"]').setValue('Block A')
+    expect(model.value.SCI_UnitName).toBe('')
+    await wrapper.find('[name="PCI_UnitNumber"]').setValue('12')
+    expect(model.value.SCI_UnitNumber).toBe('12')
+  })
 })

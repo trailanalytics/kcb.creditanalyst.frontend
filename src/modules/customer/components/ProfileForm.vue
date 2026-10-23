@@ -18,8 +18,14 @@ import AddressFields from './AddressFields.vue'
  * user types, as `profileAlternativeAddress` did.
  */
 const props = withDefaults(
-  defineProps<{ invalid?: string[]; newCap?: boolean; joint?: boolean; classificationLocked?: boolean }>(),
-  { invalid: () => [], newCap: false, joint: false, classificationLocked: false },
+  defineProps<{
+    invalid?: string[]
+    newCap?: boolean
+    joint?: boolean
+    classificationLocked?: boolean
+    embedded?: boolean
+  }>(),
+  { invalid: () => [], newCap: false, joint: false, classificationLocked: false, embedded: false },
 )
 const form = defineModel<ProfileModel>({ required: true })
 const emit = defineEmits<{ classificationChange: [value: string] }>()
@@ -45,10 +51,15 @@ provideProfile({
   },
   invalid: invalidFields,
   id,
+  get embedded() {
+    return props.embedded
+  },
   set(name, value) {
     form.value[name] = value
     invalidFields.value = invalidFields.value.filter((f) => f !== name)
-    if (name.startsWith('PCI_')) form.value[`SCI_${name.slice(4)}`] = value
+    // the embedded forms never copied the apartment name
+    if (name.startsWith('PCI_') && !(props.embedded && name === 'PCI_UnitName'))
+      form.value[`SCI_${name.slice(4)}`] = value
   },
 })
 
@@ -66,7 +77,7 @@ const isCompany = () => form.value.classificationCode === NON_INDIVIDUAL
 
 <template>
   <div v-if="loaded" class="profile-form">
-    <ProfileRow label="Client Number">
+    <ProfileRow v-if="!embedded" label="Client Number">
       <input
         :id="`${id}-clientNumber`"
         :value="form.clientNumber"
@@ -76,10 +87,10 @@ const isCompany = () => form.value.classificationCode === NON_INDIVIDUAL
         @click="clientNumberClicked"
       />
     </ProfileRow>
-    <ProfileRow label="Branch Code"
+    <ProfileRow v-if="!embedded" label="Branch Code"
       ><ProfileInput name="branchCode" :options="options.branches.value" blank="Select Branch"
     /></ProfileRow>
-    <ProfileRow label="Classification">
+    <ProfileRow v-if="!embedded" label="Classification">
       <ProfileInput
         name="classificationCode"
         :options="CLASSIFICATIONS"
@@ -89,8 +100,8 @@ const isCompany = () => form.value.classificationCode === NON_INDIVIDUAL
       />
     </ProfileRow>
 
-    <CompanyFields v-if="isCompany()" :show-heading="!newCap" :hide-vat="joint" />
-    <IndividualFields v-else :show-heading="!newCap" />
+    <CompanyFields v-if="isCompany()" :show-heading="!newCap && !embedded" :hide-vat="joint" />
+    <IndividualFields v-else :show-heading="!newCap && !embedded" />
 
     <AddressFields prefix="PCI_" title="Address" />
     <AddressFields prefix="SCI_" title="Alternative Address" />

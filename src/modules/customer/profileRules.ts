@@ -57,16 +57,32 @@ const NON_INDIVIDUAL_ONLY = [
 export interface RuleOptions {
   /** The joint form does not require the primary County/Town nor the alternative District. */
   joint?: boolean
+  /**
+   * The profile embedded in the guarantor, stakeholder, fraud and PI stakeholder forms (manage/profile/form/*): branch and
+   * classification live in the surrounding modal, the national ID, occupation and joined-employer date are always required, and
+   * only the alternative address needs a County/Town.
+   */
+  embedded?: boolean
 }
 
 /** The fields that must be filled for this profile. II_CountryID counts only for a Ugandan identity document. */
 export function requiredFields(m: ProfileModel, options: RuleOptions = {}): string[] {
   const nonIndividual = m.classificationCode === NON_INDIVIDUAL
-  const pci = address('PCI_', options.joint ? ['CountyorTown'] : [])
+  const pci = address('PCI_', options.joint || options.embedded ? ['CountyorTown'] : [])
   const sci = address('SCI_', options.joint ? ['District'] : [])
   const own = nonIndividual ? NON_INDIVIDUAL_ONLY : INDIVIDUAL_ONLY
-  const fields = ['branchCode', 'classificationCode', ...own, ...pci, ...sci]
-  if (!nonIndividual && m.II_CountryOfIssue === 'UG') fields.push('II_CountryID')
+  const head = options.embedded ? [] : ['branchCode', 'classificationCode']
+  const fields = [...head, ...own, ...pci, ...sci]
+  if (!nonIndividual && options.embedded)
+    fields.push(
+      'GSCAFB_Forename1',
+      'GSCAFB_Surname',
+      'EI_PrimaryOccupation',
+      'joinedEmployerMonth',
+      'joinedEmployerYear',
+      'II_CountryID',
+    )
+  else if (!nonIndividual && m.II_CountryOfIssue === 'UG') fields.push('II_CountryID')
   return fields
 }
 
