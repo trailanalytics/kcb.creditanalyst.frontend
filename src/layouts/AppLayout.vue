@@ -1,26 +1,32 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+import { computed } from 'vue'
+import { RouterView } from 'vue-router'
+import TopBar from '@/components/layout/TopBar.vue'
+import SubNav from '@/components/layout/SubNav.vue'
+import type { NavItem } from '@/components/layout/types'
 import { useAuthStore } from '@/stores/auth'
 
+/** CRB layout: navy bar + green section bar. Items and gates are those of layouts/navbar2.blade.php. */
 const auth = useAuthStore()
+const items = computed<NavItem[]>(() => {
+  const list: NavItem[] = [
+    { label: 'Dashboard', to: '/home' },
+    { label: 'Profiles', to: '/profiles' },
+    { label: 'Output Files', to: '/output-files' },
+    { label: 'Requests', to: '/requests' },
+  ]
+  if (auth.has('Sync T24')) list.push({ label: 'Configuration', to: '/t24' })
+  if (auth.has('View Off Balance Sheet Items'))
+    list.push({ label: 'Off Balance Sheet Items', to: '/off-balance-sheet' })
+  if (auth.isAdmin) list.push({ label: 'Admin Dashboard', to: '/admin' })
+  return list
+})
 </script>
 
 <template>
   <div class="min-h-screen">
-    <!-- Top bar: navy, as in layouts/app.blade.php navbar1 -->
-    <header class="flex items-center justify-between bg-kcb-navy px-6 py-3 text-white">
-      <div class="flex items-center gap-3">
-        <img src="/img/KCB.logo.png" alt="KCB" class="h-8" />
-        <span class="text-lg font-semibold">Credit Analyst</span>
-      </div>
-      <span class="text-sm text-slate-200">{{ auth.user?.name }}</span>
-    </header>
-    <!-- Section bar: KCB green, as in navbar2 -->
-    <nav class="flex gap-6 bg-kcb-green px-6 py-2 text-sm font-medium text-white">
-      <RouterLink :to="{ name: 'home' }">Dashboard</RouterLink>
-    </nav>
-    <div class="p-6">
-      <RouterView />
-    </div>
+    <TopBar />
+    <SubNav :items="items" />
+    <main class="px-7 pt-4"><RouterView /></main>
   </div>
 </template>

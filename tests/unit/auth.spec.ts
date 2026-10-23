@@ -13,7 +13,16 @@ describe('auth store', () => {
 
   it('reports permissions of the signed-in user', () => {
     const auth = useAuthStore()
-    auth.user = { id: 1, name: 'Test', email: 't@example.com', role: 'admin', permissions: ['Sync T24'] }
+    auth.user = {
+      id: 1,
+      firstname: 'Test',
+      lastname: 'User',
+      name: 'Test User',
+      email: 't@example.com',
+      role: 'admin',
+      branchId: null,
+      permissions: ['Sync T24'],
+    }
     expect(auth.isAuthenticated).toBe(true)
     expect(auth.has('Sync T24')).toBe(true)
     expect(auth.has('Delete Applications')).toBe(false)
