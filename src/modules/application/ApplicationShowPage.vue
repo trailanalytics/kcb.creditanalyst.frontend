@@ -6,6 +6,9 @@ import { useReferenceStore } from '@/stores/reference'
 import { useAuthStore } from '@/stores/auth'
 import { swalNotification } from '@/utils/dialogs'
 import { formatNumber } from '@/utils/format'
+import SecurityActions from '@/modules/securities/components/SecurityActions.vue'
+import SecurityPanels from '@/modules/securities/components/SecurityPanels.vue'
+import type { SecurityContext } from '@/modules/securities/types'
 import { applicationsApi } from './api'
 import { crbToLong, termText } from './loanModel'
 import type { Application } from './types'
@@ -17,6 +20,9 @@ const auth = useAuthStore()
 const ref_ = useReferenceStore()
 const app = ref<Application | null>(null)
 const showAll = ref(false)
+const securityContext = computed<SecurityContext | null>(() =>
+  app.value ? { type: 'application', referenceNumber: app.value.creditApplicationReference } : null,
+)
 
 onMounted(async () => {
   try {
@@ -139,7 +145,13 @@ const groups = computed(() => {
             </template>
           </dl>
         </div>
-        <div class="flex gap-2">
+        <div class="flex flex-wrap items-start gap-2">
+          <SecurityActions
+            v-if="securityContext"
+            :context="securityContext"
+            :stakeholders="app.customer?.classificationCode === '1'"
+            existing-stakeholder
+          />
           <RouterLink
             v-if="auth.has('Approve/Reject Applications')"
             :to="`/applications/change-status/${app.id}`"
@@ -215,5 +227,7 @@ const groups = computed(() => {
         </table>
       </div>
     </div>
+
+    <SecurityPanels v-if="securityContext" :context="securityContext" />
   </section>
 </template>
