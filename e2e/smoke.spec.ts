@@ -37,6 +37,6 @@ test('login then dashboard shows the tiles the user may use', async ({ page }) =
   await page.getByRole('button', { name: 'Login' }).click()
   await expect(page).toHaveURL(/\/home/)
   await expect(page.getByText(/Good (morning|afternoon|evening), Doe/)).toBeVisible()
-  await expect(page.getByRole('link', { name: 'REPORTS' })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'ANALYSIS' })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'REPORTS', exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'ANALYSIS', exact: true })).toHaveCount(0)
 })

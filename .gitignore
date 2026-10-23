@@ -8,3 +8,7 @@ test-results
 .idea
 .vscode
 *.tsbuildinfo
+# stray compiler output
+/e2e/*.js
+/vite.config.js
+/playwright.config.js
