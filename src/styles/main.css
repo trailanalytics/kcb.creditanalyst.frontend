@@ -1,0 +1,22 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+
+/* Design tokens carried over from the Laravel theme (resources/sass/theme.scss, layouts/app.blade.php). */
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+
+  --color-kcb-navy: #002c4d;
+  --color-kcb-green: #84bd00;
+  --color-project: #0c466a;
+  --color-primary-1: #2778c4;
+  --color-danger: #e63757;
+  --color-success: #00d97e;
+  --color-ink: #12263f;
+  --color-muted: #95aac9;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-50 font-sans text-ink antialiased;
+  }
+}
