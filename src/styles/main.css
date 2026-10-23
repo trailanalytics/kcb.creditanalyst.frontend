@@ -20,3 +20,24 @@
     @apply bg-slate-50 font-sans text-ink antialiased;
   }
 }
+
+@layer components {
+  .form-input {
+    @apply w-full rounded border border-slate-300 bg-white px-3 py-2 text-sm text-ink focus:border-primary-1 focus:outline-none disabled:bg-slate-100 read-only:bg-slate-100;
+  }
+  .form-input.is-invalid {
+    @apply border-danger;
+  }
+  .btn-primary-1 {
+    @apply inline-flex items-center justify-center gap-1 rounded bg-primary-1 px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-1 rounded border border-slate-300 bg-white px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-60;
+  }
+  .btn-system {
+    @apply inline-flex items-center justify-center rounded bg-project px-6 py-3 text-sm font-semibold uppercase tracking-wide text-white hover:opacity-90 disabled:opacity-60;
+  }
+  .card {
+    @apply rounded border border-slate-200 bg-white;
+  }
+}

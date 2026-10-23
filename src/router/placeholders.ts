@@ -11,12 +11,6 @@ export interface Placeholder {
 }
 
 export const PLACEHOLDERS: Placeholder[] = [
-  { path: '/profiles', title: 'Profiles', milestone: 'M3' },
-  { path: '/applications', title: 'Credit Applications', milestone: 'M3' },
-  { path: '/applications/report', title: 'Applications Report', milestone: 'M3' },
-  { path: '/applications/bulk-approve', title: 'Bulk Approval', milestone: 'M3' },
-  { path: '/applications/non-existing-customer', title: 'Non Existing Customer', milestone: 'M3' },
-  { path: '/applications/joint', title: 'Joint Application', milestone: 'M3' },
   {
     path: '/auto-approval-reviews',
     title: 'Auto-Approval Reviews',

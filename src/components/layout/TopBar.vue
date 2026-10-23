@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { timeOfDayGreeting } from '@/utils/greeting'
+import GlobalSearch from './GlobalSearch.vue'
 
 /** First bar of every signed-in page (layouts/navbar1.blade.php): logo, title, greeting, logout. */
 const auth = useAuthStore()
@@ -23,8 +24,7 @@ async function logout() {
         <div class="text-lg font-semibold">Credit Analyst</div>
         <small class="text-sm">{{ greeting }}</small>
       </div>
-      <!-- Global search (customers, CAPs, loans) arrives with milestone M3 -->
-      <div class="flex-1" />
+      <div class="flex flex-1 justify-center"><GlobalSearch /></div>
       <button
         type="button"
         class="text-danger hover:opacity-80"

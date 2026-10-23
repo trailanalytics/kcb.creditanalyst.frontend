@@ -1,6 +1,10 @@
+export type TileAction = 'non-existing-customer' | 'joint-application'
+
 export interface TileMenuItem {
   label: string
-  to: string
+  /** Page to open; entries with an `action` open a dialog on the dashboard instead. */
+  to?: string
+  action?: TileAction
   /** Permission needed to see this entry. */
   permission?: string
 }

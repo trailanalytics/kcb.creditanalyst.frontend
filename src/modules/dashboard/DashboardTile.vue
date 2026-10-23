@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterLink } from 'vue-router'
-import type { Tile } from './types'
+import type { Tile, TileAction } from './types'
 import {
   DropdownMenuContent,
   DropdownMenuItem,
@@ -11,6 +11,7 @@ import {
 
 /** One dashboard card (home.blade.php): icon, title link, subtitle, footer link and an optional "more" menu. */
 defineProps<{ tile: Tile }>()
+const emit = defineEmits<{ action: [action: TileAction] }>()
 </script>
 
 <template>
@@ -51,9 +52,18 @@ defineProps<{ tile: Tile }>()
             :side-offset="4"
             class="z-50 max-h-80 min-w-56 overflow-y-auto rounded border border-slate-200 bg-white py-1 shadow-lg"
           >
-            <DropdownMenuItem v-for="m in tile.menu" :key="m.to" as-child>
+            <DropdownMenuItem v-for="m in tile.menu" :key="m.to ?? m.action" as-child>
+              <button
+                v-if="m.action"
+                type="button"
+                class="block w-full px-4 py-2 text-left text-sm text-slate-700 outline-none data-[highlighted]:bg-slate-100"
+                @click="emit('action', m.action)"
+              >
+                {{ m.label }}
+              </button>
               <RouterLink
-                :to="m.to"
+                v-else
+                :to="m.to ?? '/'"
                 class="block px-4 py-2 text-sm text-slate-700 outline-none data-[highlighted]:bg-slate-100"
               >
                 {{ m.label }}

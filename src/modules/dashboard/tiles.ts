@@ -12,8 +12,8 @@ export const CRB_TILES: Tile[] = [
       { label: 'Applications Report', to: '/applications/report' },
       { label: 'Bulk Approval', to: '/applications/bulk-approve' },
       { label: 'Auto-Approval Reviews', to: '/auto-approval-reviews', permission: 'Resolve Auto-Approvals' },
-      { label: 'Non Existing Customer', to: '/applications/non-existing-customer' },
-      { label: 'Joint Application', to: '/applications/joint' },
+      { label: 'Non Existing Customer', action: 'non-existing-customer' },
+      { label: 'Joint Application', action: 'joint-application' },
     ],
   },
   {
