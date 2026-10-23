@@ -21,6 +21,13 @@
   }
 }
 
+@layer base {
+  /* SweetAlert lives outside a modal dialog, which switches pointer events off on the page body */
+  .swal2-container {
+    pointer-events: auto;
+  }
+}
+
 @layer components {
   .form-input {
     @apply w-full rounded border border-slate-300 bg-white px-3 py-2 text-sm text-ink focus:border-primary-1 focus:outline-none disabled:bg-slate-100 read-only:bg-slate-100;
