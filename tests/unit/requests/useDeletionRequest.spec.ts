@@ -13,10 +13,15 @@ vi.mock('@/utils/dialogs', () => ({
 }))
 vi.mock('@/api/http', () => ({
   http: { post: (...a: unknown[]) => post(...a) },
-  messageOf: (_e: unknown, fallback: string) => fallback,
+  messageOf: (e: { detail?: string } | undefined, fallback: string) => e?.detail ?? fallback,
+  problemOf: (e: { errors?: Record<string, string[]> } | undefined) => e ?? null,
 }))
 
-import { promptReason, submitDeletionRequest } from '@/modules/requests/useDeletionRequest'
+import {
+  deletionErrorMessage,
+  promptReason,
+  submitDeletionRequest,
+} from '@/modules/requests/useDeletionRequest'
 
 describe('promptReason', () => {
   beforeEach(() => {
@@ -65,5 +70,21 @@ describe('submitDeletionRequest', () => {
     const payload = { record_id: 7, table_name: 'collaterals', comment: 'gone' }
     expect(await submitDeletionRequest(payload)).toEqual({ message: 'ok', id: 5 })
     expect(post).toHaveBeenCalledWith('/deletion-requests', payload)
+  })
+})
+
+describe('deletionErrorMessage', () => {
+  it('prefers the first field message of a 422', () => {
+    const e = {
+      detail: 'The given data was invalid.',
+      errors: { comment: ['A reason is required'], table_name: ['x'] },
+    }
+    expect(deletionErrorMessage(e)).toBe('A reason is required')
+  })
+  it('falls back to the detail, then to the text given', () => {
+    expect(
+      deletionErrorMessage({ detail: 'A request to delete this record is already waiting for approval.' }),
+    ).toBe('A request to delete this record is already waiting for approval.')
+    expect(deletionErrorMessage(undefined)).toBe('Failed to submit deletion request. Please try again.')
   })
 })

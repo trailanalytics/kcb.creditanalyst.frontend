@@ -1,4 +1,4 @@
-import { http, messageOf } from '@/api/http'
+import { http, messageOf, problemOf } from '@/api/http'
 import { hideLoader, showLoader, swalDelete, swalNotification, toast } from '@/utils/dialogs'
 
 /** What a delete button sends: the record, the table it lives in and why. `deletion_scope` is only `customer_full`. */
@@ -14,9 +14,18 @@ export interface DeletionRequestResult {
   id: number
 }
 
-/** POST /deletion-requests. Rejects with the axios error (422 validation, 403, 404, 409 already requested); use `messageOf` for the text. */
+/** POST /deletion-requests. Rejects with the axios error (422 validation, 403, 404, 409 already requested); use `deletionErrorMessage` for the text. */
 export function submitDeletionRequest(payload: DeletionRequestPayload): Promise<DeletionRequestResult> {
   return http.post<DeletionRequestResult>('/deletion-requests', payload).then((r) => r.data)
+}
+
+/** The text to show for a failed submit: the first field message of a 422 (reason missing, kind not allowed ...), else the server's detail, else the fallback. */
+export function deletionErrorMessage(
+  error: unknown,
+  fallback = 'Failed to submit deletion request. Please try again.',
+): string {
+  const first = Object.values(problemOf(error)?.errors ?? {}).flat()[0]
+  return first ?? messageOf(error, fallback)
 }
 
 const DEFAULT_EMPTY = 'The reason for your request is required!'
@@ -82,7 +91,7 @@ export async function requestDeletion(flow: DeletionFlow): Promise<boolean> {
     return true
   } catch (e) {
     hideLoader()
-    await swalNotification('error', messageOf(e, 'Failed to submit deletion request. Please try again.'))
+    await swalNotification('error', deletionErrorMessage(e))
     return false
   }
 }
