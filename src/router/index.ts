@@ -12,6 +12,7 @@ import { cbaFixRoutes } from '@/modules/cbafix/routes'
 import { processRoutes } from '@/modules/processes/routes'
 import { reportRoutes } from '@/modules/reports/routes'
 import { requestRoutes } from '@/modules/requests/routes'
+import { cbsQueryRoutes } from '@/modules/cbsqueries/routes'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -19,6 +20,8 @@ declare module 'vue-router' {
     public?: boolean
     /** Permission name that must be granted (user_permissions). */
     permission?: string
+    /** One of these permission names must be granted (a page that either of two roles may open). */
+    anyPermission?: string[]
     /** Only for the admin and CRB officer roles (Laravel's `admin` middleware). */
     admin?: boolean
     title?: string
@@ -153,6 +156,7 @@ const routes: RouteRecordRaw[] = [
       ...processRoutes,
       ...reportRoutes,
       ...requestRoutes,
+      ...cbsQueryRoutes,
       ...placeholderRoutes.filter((r) => r.path !== '/admin/configuration'),
     ],
   },
@@ -219,6 +223,8 @@ router.beforeEach(async (to) => {
     return { name: 'login', query: to.fullPath === '/' ? {} : { redirect: to.fullPath } }
   if (to.matched.some((r) => r.meta.admin) && !auth.canSeeAdmin) return { name: 'home' }
   if (to.meta.permission && !auth.has(to.meta.permission)) return { name: 'error', params: { code: '403' } }
+  if (to.meta.anyPermission && !to.meta.anyPermission.some((p) => auth.has(p)))
+    return { name: 'error', params: { code: '403' } }
   return true
 })
 
