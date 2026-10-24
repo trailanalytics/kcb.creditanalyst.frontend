@@ -19,8 +19,6 @@ export const PLACEHOLDERS: Placeholder[] = [
   },
   { path: '/cba/output', title: 'Update CBA Accounts', milestone: 'M6', permission: 'Update CBA Details' },
   { path: '/cba/fix', title: 'Fix CBA Issues', milestone: 'M6', permission: 'Update CBA Details' },
-  { path: '/t24', title: 'Configuration', milestone: 'M5', permission: 'Sync T24' },
-  { path: '/analysis', title: 'PR4 vs CBA Analysis', milestone: 'M5', permission: 'View Analysis' },
   { path: '/reports', title: 'CRB Reports', milestone: 'M6', permission: 'Download Crb Reports' },
   {
     path: '/reports/loans-without-cmc-bs-ccg',
@@ -42,5 +40,4 @@ export const PLACEHOLDERS: Placeholder[] = [
     permission: 'View Analysis',
   },
   { path: '/requests', title: 'Deletion Requests', milestone: 'M7' },
-  { path: '/admin/configuration', title: 'System Configuration', milestone: 'M9', layout: 'admin' },
 ]

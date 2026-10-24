@@ -6,6 +6,8 @@ import { securitiesRoutes } from '@/modules/securities/routes'
 import { chequeRoutes } from '@/modules/cheque/routes'
 import { fraudRoutes } from '@/modules/fraud/routes'
 import { institutionRoutes } from '@/modules/institution/routes'
+import { adminConfigRoutes, t24Routes } from '@/modules/t24/routes'
+import { analysisRoutes } from '@/modules/analysis/routes'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -141,6 +143,8 @@ const routes: RouteRecordRaw[] = [
       ...chequeRoutes,
       ...fraudRoutes,
       ...institutionRoutes,
+      ...t24Routes,
+      ...analysisRoutes,
       ...placeholderRoutes.filter((r) => r.path !== '/admin/configuration'),
     ],
   },
@@ -155,12 +159,7 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/modules/dashboard/AdminDashboardPage.vue'),
         meta: { title: 'Admin Dashboard' },
       },
-      {
-        path: 'configuration',
-        name: 'admin-configuration',
-        component: () => import('@/pages/PlaceholderPage.vue'),
-        meta: { title: 'System Configuration', milestone: 'M9' },
-      },
+      ...adminConfigRoutes,
     ],
   },
   {
