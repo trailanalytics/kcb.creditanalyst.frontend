@@ -9,8 +9,8 @@ const proxy = readFileSync('nginx/snippets/proxy-api.conf', 'utf8')
 /** The `location ... { ... }` blocks of the template (they hold no nested braces). */
 function locations(): { head: string; body: string }[] {
   return [...template.matchAll(/location\s+([^{]+)\{([^}]*)\}/g)].map((m) => ({
-    head: m[1].trim(),
-    body: m[2],
+    head: (m[1] ?? '').trim(),
+    body: m[2] ?? '',
   }))
 }
 
