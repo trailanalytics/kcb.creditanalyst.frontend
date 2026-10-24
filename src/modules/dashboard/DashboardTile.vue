@@ -28,7 +28,15 @@ const emit = defineEmits<{ action: [action: TileAction] }>()
       />
       <div v-else class="h-[70px] w-[70px] shrink-0 rounded bg-slate-100" />
       <div class="pt-2">
-        <RouterLink :to="tile.to" class="text-xl font-semibold text-slate-600">{{ tile.title }}</RouterLink>
+        <RouterLink :to="tile.to" class="text-xl font-semibold text-slate-600"
+          >{{ tile.title }}
+          <span
+            v-if="tile.badge"
+            class="ml-1 rounded-full bg-amber-400 px-2 py-0.5 align-middle text-[10px] font-semibold text-slate-800"
+            data-testid="tile-badge"
+            >{{ tile.badge }}</span
+          ></RouterLink
+        >
         <br />
         <span class="text-muted">{{ tile.subtitle }}</span>
       </div>
