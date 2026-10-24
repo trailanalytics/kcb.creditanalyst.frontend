@@ -12,9 +12,9 @@ const items = computed<NavItem[]>(() => {
   const list: NavItem[] = [
     { label: 'Dashboard', to: '/home' },
     { label: 'Profiles', to: '/profiles' },
-    { label: 'Output Files', to: '/output-files' },
     { label: 'Requests', to: '/requests' },
   ]
+  if (auth.has('Download Crb Reports')) list.splice(2, 0, { label: 'Output Files', to: '/output-files' })
   if (auth.has('Sync T24')) list.push({ label: 'Configuration', to: '/t24' })
   if (auth.has('View Off Balance Sheet Items'))
     list.push({ label: 'Off Balance Sheet Items', to: '/off-balance-sheet/items' })

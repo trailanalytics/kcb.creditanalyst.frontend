@@ -8,6 +8,9 @@ import { fraudRoutes } from '@/modules/fraud/routes'
 import { institutionRoutes } from '@/modules/institution/routes'
 import { adminConfigRoutes, t24Routes } from '@/modules/t24/routes'
 import { analysisRoutes } from '@/modules/analysis/routes'
+import { cbaFixRoutes } from '@/modules/cbafix/routes'
+import { processRoutes } from '@/modules/processes/routes'
+import { reportRoutes } from '@/modules/reports/routes'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -145,6 +148,9 @@ const routes: RouteRecordRaw[] = [
       ...institutionRoutes,
       ...t24Routes,
       ...analysisRoutes,
+      ...cbaFixRoutes,
+      ...processRoutes,
+      ...reportRoutes,
       ...placeholderRoutes.filter((r) => r.path !== '/admin/configuration'),
     ],
   },
