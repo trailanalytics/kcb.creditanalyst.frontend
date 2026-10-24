@@ -138,4 +138,12 @@ export const ADMIN_TILES: Tile[] = [
     to: '/admin/configuration',
     footer: 'Manage system',
   },
+  {
+    title: 'CBS Queries',
+    subtitle: 'Core banking SQL',
+    icon: 'configuration.png',
+    to: '/cbs-queries',
+    footer: 'CBS Query Configuration',
+    anyPermission: ['Manage CBS Queries', 'Review CBS Queries'],
+  },
 ]

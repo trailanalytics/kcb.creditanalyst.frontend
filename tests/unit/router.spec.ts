@@ -71,6 +71,31 @@ describe('route guards', () => {
   })
 })
 
+describe('CBS query routes', () => {
+  it('opens the overview with either permission and refuses a user with neither', async () => {
+    expect((await go('/cbs-queries', me('crb', []))).params.code).toBe('403')
+    expect((await go('/cbs-queries', me('crb', ['Manage Users']))).params.code).toBe('403')
+    expect((await go('/cbs-queries', me('crb', ['Manage CBS Queries']))).name).toBe('cbs-queries')
+    expect((await go('/cbs-queries/events', me('crb', ['Review CBS Queries']))).name).toBe('cbs-events')
+    expect((await go('/cbs-queries/versions/7', me('crb', ['Review CBS Queries']))).name).toBe('cbs-version')
+  })
+
+  it('keeps the editor for Manage and the review page for Review', async () => {
+    expect((await go('/cbs-queries/versions/7/edit', me('crb', ['Review CBS Queries']))).params.code).toBe(
+      '403',
+    )
+    expect((await go('/cbs-queries/versions/7/edit', me('crb', ['Manage CBS Queries']))).name).toBe(
+      'cbs-edit',
+    )
+    expect((await go('/cbs-queries/versions/7/review', me('crb', ['Manage CBS Queries']))).params.code).toBe(
+      '403',
+    )
+    expect((await go('/cbs-queries/versions/7/review', me('crb', ['Review CBS Queries']))).name).toBe(
+      'cbs-review',
+    )
+  })
+})
+
 describe('auth store', () => {
   it('exposes admin helpers', () => {
     setActivePinia(createPinia())
