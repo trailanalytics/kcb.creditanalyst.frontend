@@ -24,8 +24,10 @@ description = "Documented development values and examples: the throwaway root/ro
 regexes = [
   '''^root$''',
   '''^test-(key|iv)$''',
+  '''^SECRET\)?$''', # the word in this file's own rule description
 ]
 paths = [
   '''(^|/)\.env\.example$''',
   '''^docs/security/''',
+  '''(^|/)\.gitleaks\.toml$''',
 ]
