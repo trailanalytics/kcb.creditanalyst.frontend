@@ -47,9 +47,12 @@ export function uniqueAmount(): string {
 
 /** Open the "..." menu of a row that shows its actions on hover, and choose an item. */
 export async function rowMenu(page: Page, row: Locator, item: string | RegExp) {
-  await row.hover()
-  await row.getByRole('button', { name: 'More actions' }).click()
-  await page.getByRole('menuitem', { name: item }).click()
+  // the menu is drawn again when the list reloads under it: try the whole gesture again rather than the single click
+  await expect(async () => {
+    await row.hover()
+    await row.getByRole('button', { name: 'More actions' }).click()
+    await page.getByRole('menuitem', { name: item }).click({ timeout: 5_000 })
+  }).toPass({ timeout: 40_000 })
 }
 
 export interface ProfileFill {

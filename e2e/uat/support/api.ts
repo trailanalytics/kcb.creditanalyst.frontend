@@ -30,7 +30,9 @@ export class Api {
     email: string,
     password: string,
   ): Promise<{ api: Api | null; status: number; body: any }> {
-    const ctx = await request.newContext({ baseURL: BASE_URL })
+    // an empty jar on purpose: inside a test the request factory would otherwise start from the spec's storageState
+    // and the sign-in would rotate that session's id under the page that still uses it
+    const ctx = await request.newContext({ baseURL: BASE_URL, storageState: { cookies: [], origins: [] } })
     await ctx.get('/api/v1/me') // the first request hands out the CSRF cookie
     const token = await xsrf(ctx)
     const res = await ctx.post('/api/v1/auth/login', {

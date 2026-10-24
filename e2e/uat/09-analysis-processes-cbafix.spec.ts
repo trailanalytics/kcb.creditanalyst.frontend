@@ -64,14 +64,14 @@ function pr4Row(transId: string, custId: string, balance: string): string[] {
   ]
 }
 
-/** The PR4 workbook of the cases: three loans of the CBA with their balances and one the CBA does not know. */
+/** The PR4 workbook of the cases: three loans of the CBA (the UATPR fixtures: the upload rewrites them) and one the CBA does not know. */
 function pr4Workbook(): Buffer {
   return buildXlsx(
     [
       PR4_HEADER,
-      pr4Row('UATLN0001', '9100010', '41000000'),
-      pr4Row('UATLN0004', '9100012', '120000'),
-      pr4Row('UATLN0002', '9100010', '1'),
+      pr4Row('UATPR0001', '9100010', '41000000'),
+      pr4Row('UATPR0002', '9100012', '120000'),
+      pr4Row('UATPR0003', '9100010', '1'),
       pr4Row(`AA${Date.now().toString().slice(-8)}`, '9100099', '500000'),
     ],
     'PR4',
@@ -105,7 +105,7 @@ test.describe('PR4 upload and analysis', () => {
     await page.getByLabel('Exchange Rate (USD → UGX)').fill('3765')
     await page.locator('#actionSelect').selectOption('analyse_pr4')
     await page
-      .locator('input[type="file"]')
+      .locator('#app input[type="file"]')
       .setInputFiles({ name: 'PR4-sept.xlsx', mimeType: xlsxType, buffer: pr4Workbook() })
     await page.getByTestId('submit').click()
     await expect(dialog(page)).toContainText(/queued|processing|background|upload/i)
@@ -247,30 +247,73 @@ test.describe('CBA fix tools: the modify accounts grid and the file fixes', () =
 
   test('a value of an account is changed through the grid API and read back', async () => {
     const api = await Api.as('crb')
+    const columns = (await api.get('/api/v1/cba/columns')).body as { key: string }[]
+    const at = (key: string) => columns.findIndex((c) => c.key === key)
     const found = await api.get('/api/v1/cba/accounts', { search: 'UATLN0004' })
     expect(found.body.total).toBeGreaterThanOrEqual(1)
     const row = found.body.data[0]
-    const reference = row.CreditAccountReference ?? row.values?.CreditAccountReference
-    expect(reference).toBeTruthy()
-    const stamp = `UAT${unique()}`.slice(0, 20)
+    const reference = row.values[at('Credit_Account_Reference')]
+    const client = row.values[at('Borrowers_Client_Number')]
+    expect(reference).toBe('UATLN0004')
+    const stamp = `UAT ${unique()}`.slice(0, 30)
+    // the two keys find the row, the other keys are the cells that changed (by header name)
     const saved = await api.put('/api/v1/cba/accounts', {
-      changes: [{ id: row.id, values: { OldContractCode: stamp } }],
+      accounts: [
+        { Credit_Account_Reference: reference, Borrowers_Client_Number: client, EI_Employer_Name: stamp },
+      ],
     })
-    expect([200, 422]).toContain(saved.status)
+    expect(saved.status).toBe(200)
+    expect(saved.body.updated).toBe(1)
+    expect(saved.body.unmatched).toEqual([])
+    const after = await api.get('/api/v1/cba/accounts', { search: 'UATLN0004' })
+    expect(after.body.data[0].values[at('EI_Employer_Name')]).toBe(stamp)
+    // a row that is not in the output is reported, not invented
+    const missing = await api.put('/api/v1/cba/accounts', {
+      accounts: [
+        { Credit_Account_Reference: 'NOSUCHACCOUNT', Borrowers_Client_Number: '1', EI_Employer_Name: 'x' },
+      ],
+    })
+    expect(missing.status).toBe(200)
+    expect(missing.body.updated).toBe(0)
+    expect(missing.body.unmatched).toHaveLength(1)
     await api.dispose()
   })
 
-  test('the fix tool templates download and a records file with no reference is refused', async () => {
+  test('the fix tool templates download, a records file is processed in the background and a file without the column changes nothing', async () => {
     const api = await Api.as('crb')
-    const template = await api.get('/api/v1/cba/fix/template/delete-records')
-    expect([200, 404]).toContain(template.status)
+    const heads = { 'delete-records': 'contractCode', 'fix-customer': 'clientNumber,dob,nin,gender' }
+    for (const [tool, header] of Object.entries(heads)) {
+      const template = await api.raw(`/api/v1/cba/fix/template/${tool}`)
+      expect(template.status).toBe(200)
+      expect(template.buffer.toString('utf8').trim()).toBe(header)
+    }
+    const total = async () => (await api.get('/api/v1/cba/accounts')).body.total as number
+    const before = await total()
+    expect(before).toBeGreaterThan(0)
+
+    // a workbook with no contractCode column is queued like any other and removes nothing
     const bad = await api.upload('/api/v1/cba/fix/delete-records', 'file', {
       name: 'records.xlsx',
       mimeType: xlsxType,
       buffer: buildXlsx([['a'], ['b']]),
     })
-    expect(bad.status).toBeGreaterThanOrEqual(400)
-    expect(bad.status).toBeLessThan(500)
+    expect(bad.status).toBe(202)
+    const idle = await waitForProcess(api, (p) => p.id === bad.body.process_id)
+    expect(idle.status, `${idle.error_message ?? idle.progress_label}`).toBe('completed')
+    expect(await total()).toBe(before)
+
+    // a record that is in the CBA output goes when its contract code is listed (the next CBA run builds the output again)
+    expect((await api.get('/api/v1/cba/accounts', { search: 'UATLN0008' })).body.total).toBe(1)
+    const good = await api.upload('/api/v1/cba/fix/delete-records', 'file', {
+      name: 'records.xlsx',
+      mimeType: xlsxType,
+      buffer: buildXlsx([['contractCode'], ['UATLN0008']]),
+    })
+    expect(good.status).toBe(202)
+    const done = await waitForProcess(api, (p) => p.id === good.body.process_id)
+    expect(done.status, `${done.error_message ?? done.progress_label}`).toBe('completed')
+    expect((await api.get('/api/v1/cba/accounts', { search: 'UATLN0008' })).body.total).toBe(0)
+    expect(await total()).toBe(before - 1)
     await api.dispose()
   })
 

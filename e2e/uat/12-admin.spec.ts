@@ -114,21 +114,23 @@ test.describe('admin: users', () => {
   }) => {
     const admin = await Api.as('admin')
     const checker = await Api.as('checker')
+    const lastName = `Gone${unique()}`
     const email = `uat.gone.${unique()}@kcb.test`
     await createUserViaUi(page, {
       first: 'Soon',
-      last: 'Gone',
+      last: lastName,
       email,
       password: 'Fresh#Pass2026',
       role: 'crb',
       permissions: ['View Profiles'],
     })
+    await expect(page).toHaveURL(/\/users$/)
     const session = await Api.login(email, 'Fresh#Pass2026')
     expect(session.api).not.toBeNull()
     expect((await session.api!.get('/api/v1/me')).status).toBe(200)
 
     await page.getByLabel('Search users').fill(email)
-    await page.getByRole('button', { name: 'Request deletion of Soon Gone' }).click()
+    await page.getByRole('button', { name: `Request deletion of Soon ${lastName}` }).click()
     await page.locator('.swal2-textarea').fill('Left the bank')
     await confirmDialog(page, 'Yes, Proceed!')
     await confirmDialog(page, 'OK')
@@ -157,7 +159,18 @@ test.describe('admin: users', () => {
     await readonly.close()
     const noPermission = await Api.as('officer')
     expect((await noPermission.get('/api/v1/users')).status).toBe(403)
-    expect((await noPermission.post('/api/v1/users', {})).status).toBe(403)
+    // a request without the permission is refused whatever it holds (a valid body, so no field check comes first)
+    const body = {
+      firstName: 'No',
+      lastName: 'Permission',
+      email: `uat.np.${unique()}@kcb.test`,
+      authentication: 'credit_analyst',
+      password: 'LongEnough#2026',
+      role: 'crb',
+      status: 'enabled',
+      permissionIds: [],
+    }
+    expect((await noPermission.post('/api/v1/users', body)).status).toBe(403)
     await noPermission.dispose()
   })
 })
@@ -182,7 +195,7 @@ test.describe('admin: dashboard, logs and statistics', () => {
     await page.getByLabel('Search logs').fill('uat.admin')
     await expect(page.getByRole('row').nth(1)).toBeVisible()
     await page.getByRole('tab', { name: 'Deleted Records' }).click()
-    await expect(page.getByRole('cell', { name: 'collaterals' })).toBeVisible()
+    await expect(page.getByRole('cell', { name: 'Collaterals', exact: true })).toBeVisible()
     const counts = await api.get('/api/v1/deleted-records-count')
     expect(counts.status).toBe(200)
     await api.dispose()

@@ -50,9 +50,10 @@ test.describe('T24 sync: commands, credentials, mapping and forex rates', () => 
     for (const tab of ['T24 Imports', 'T24 Commands', 'T24 Password', 'Map Client Numbers', 'Forex Rates'])
       await expect(page.getByRole('tab', { name: tab })).toBeVisible()
     await page.getByRole('tab', { name: 'T24 Commands' }).click()
-    const options = await page.getByLabel('Command').locator('option').allInnerTexts()
-    expect(options.join('|')).toContain('customers (Extract New Customers from T24)')
-    expect(options.join('|')).toContain('merge-loans (Merge Extracted Loans)')
+    // the commands come from the server after the tab opens
+    const options = page.getByLabel('Command').locator('option')
+    await expect(options.filter({ hasText: 'customers (Extract New Customers from T24)' })).toHaveCount(1)
+    await expect(options.filter({ hasText: 'merge-loans (Merge Extracted Loans)' })).toHaveCount(1)
   })
 
   test('running a command without a warehouse starts a process that fails with the reason (needs a real Oracle to succeed)', async ({
@@ -95,9 +96,11 @@ test.describe('T24 sync: commands, credentials, mapping and forex rates', () => 
     expect(database.body.configured).toBe(false)
     await page.goto('/t24')
     await page.getByRole('tab', { name: 'T24 Password' }).click()
-    await expect(page.getByText(/not set up|not configured|no warehouse|unavailable/i).first()).toBeVisible()
+    await expect(page.getByText('No credentials are saved yet.')).toBeVisible()
     const save = await api.put('/api/v1/t24/credentials', { username: 'x', password: 'y' })
-    expect(save.status).toBeGreaterThanOrEqual(400)
+    // the password is stored encrypted: without the hashing key of the deployment it cannot be saved
+    expect(save.status).toBe(503)
+    expect(JSON.stringify(save.body)).toContain('SECRET_HASHING_KEY')
     await api.dispose()
   })
 

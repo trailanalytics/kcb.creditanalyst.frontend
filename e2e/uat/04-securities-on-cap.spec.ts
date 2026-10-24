@@ -360,8 +360,8 @@ test.describe('UAT-10 to UAT-13: guarantors on an application', () => {
       GuaranteeType: '0',
       GuarantorType: '0',
     })
-    expect(self.status).toBeGreaterThanOrEqual(400)
-    expect(self.status).toBeLessThan(500)
+    expect(self.status).toBe(422)
+    expect(JSON.stringify(self.body)).toContain('A borrower cannot be a guarantor of itself')
     await api.dispose()
   })
 
@@ -389,7 +389,7 @@ test.describe('UAT-10 to UAT-13: guarantors on an application', () => {
       referenceNumber: app.creditApplicationReference,
       guarantorId: 999999999,
     })
-    expect(other.status).toBeGreaterThanOrEqual(400)
+    expect(other.status).toBe(404)
     await api.dispose()
   })
 })

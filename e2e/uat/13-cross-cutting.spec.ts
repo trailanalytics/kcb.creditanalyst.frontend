@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 import { Api } from './support/api'
 import { authFile } from './support/auth'
-import { BASE_URL, CUSTOMER, PERSONAS } from './support/env'
+import { BASE_URL, CUSTOMER } from './support/env'
 import { createApplication } from './support/data'
 import { confirmDialog, dialog, loginViaUi, unique } from './support/ui'
 
@@ -17,7 +17,8 @@ test.describe('global search', () => {
     const app = await createApplication(api, { clientNumber: CUSTOMER.main })
     await page.goto('/home')
     const box = page.getByLabel('Search customers, CAPs and loans')
-    await box.fill('Okello')
+    // two words find an individual by name; one word only looks up numbers and companies, as before (D-1316)
+    await box.fill('Okello James')
     await expect(
       page
         .getByRole('listbox')
@@ -25,6 +26,8 @@ test.describe('global search', () => {
         .first(),
     ).toBeVisible()
     await expect(page.getByRole('listbox')).toContainText('Customers')
+    await box.fill('Okello')
+    await expect(page.getByRole('listbox')).toContainText('No customers, CAPs or loans match')
     await box.fill(CUSTOMER.main)
     await expect(
       page
@@ -119,7 +122,6 @@ test.describe('403, negative and permission cases', () => {
       '/requests',
       '/t24',
       '/t24/sync',
-      '/admin/configuration',
     ]
     for (const path of guarded) {
       await page.goto(path)
@@ -134,21 +136,23 @@ test.describe('403, negative and permission cases', () => {
   }) => {
     const ctx = await browser.newContext({ storageState: authFile('noaccess') })
     const page = await ctx.newPage()
-    for (const path of ['/users', '/users/new', '/logs', '/admin']) {
+    for (const path of ['/users', '/users/new', '/logs', '/admin', '/admin/configuration']) {
       await page.goto(path)
       await expect(page, path).toHaveURL(/\/home$/)
     }
     await ctx.close()
   })
 
-  test('the API answers 401 without a session, 403 without the permission and 403 without the CSRF token', async () => {
+  test('the API answers 401 without a session, 403 without the permission and 419 without the CSRF token', async () => {
     const anonymous = await Api.login('nobody@kcb.test', 'x') // creates an anonymous session only
-    expect(anonymous.status).toBeGreaterThanOrEqual(400)
+    expect(anonymous.status).toBe(401)
     const res = await fetch(`${BASE_URL}/api/v1/applications`)
     expect(res.status).toBe(401)
     expect(res.headers.get('content-type')).toContain('application/problem+json')
     const officer = await Api.as('officer')
-    expect((await officer.get('/api/v1/reports/BC')).status).toBeGreaterThanOrEqual(400)
+    expect(
+      (await officer.post('/api/v1/reports/BC', { fromDate: '2026-01-01', toDate: '2026-10-31' })).status,
+    ).toBe(403)
     expect((await officer.get('/api/v1/loans')).status).toBe(403)
     // a state-changing call without the token header is refused even with a valid session
     const state = JSON.parse(await (await import('node:fs/promises')).readFile(authFile('officer'), 'utf8'))
@@ -158,7 +162,7 @@ test.describe('403, negative and permission cases', () => {
       headers: { cookie, 'content-type': 'application/json' },
       body: '{}',
     })
-    expect(noToken.status).toBe(403)
+    expect(noToken.status).toBe(419)
     await officer.dispose()
   })
 
@@ -194,16 +198,10 @@ test.describe('session expiry', () => {
     await page.getByPlaceholder('search...').fill('Okello')
     await expect(dialog(page)).toContainText(/session has expired|log in/i)
     await confirmDialog(page, 'OK')
-    await expect(page).toHaveURL(/\/login\?redirect=%2Fapplications/)
+    await expect(page).toHaveURL(/\/login\?redirect=(%2F|\/)applications/)
     await loginViaUi(page, 'officer')
     await expect(page).toHaveURL(/\/home|\/applications/)
     await ctx.close()
-  })
-
-  test('the idle timeout is two hours (checked in the session settings, a real wait is a manual case)', async () => {
-    const api = await Api.as('officer')
-    expect((await api.get('/api/v1/me')).status).toBe(200)
-    await api.dispose()
   })
 })
 
@@ -225,22 +223,25 @@ test.describe('an unexpected error: the 500 page and Notify IT', () => {
     })()
     await page.getByRole('button', { name: 'Notify IT' }).click()
     await expect(page).toHaveURL(/\/errors\/500/)
-    await expect(page.getByText(`Error reference: ${reference}`)).toBeVisible()
-    await page
-      .getByRole('button', { name: /Send|Notify/i })
-      .last()
-      .click()
-    await expect(page.getByText(/IT has been notified|already been notified/)).toBeVisible()
-    // the mail is in the mailbox of the stack
-    await expect
-      .poll(
-        async () => {
-          const res = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(reference)}`)
-          return res.ok ? (((await res.json()) as { messages_count?: number }).messages_count ?? 0) : 0
-        },
-        { timeout: 30_000 },
-      )
-      .toBeGreaterThan(0)
+    await expect(page.locator('#app').getByText(`Error reference: ${reference}`)).toBeVisible()
+    // the page offers "Notify IT" again: it opens the small form, and "Send to IT" sends the reference with the note
+    await page.getByRole('button', { name: 'Notify IT' }).click()
+    const note = `UAT note ${unique()}`
+    await page.getByLabel('What were you doing? (optional)').fill(note)
+    await page.getByRole('button', { name: 'Send to IT' }).click()
+    await expect(page.getByRole('status')).toContainText(/IT has been notified|already been notified/)
+    // the mail is in the mailbox of the stack, with the reference and what the user wrote
+    for (const needle of [reference, note]) {
+      await expect
+        .poll(
+          async () => {
+            const res = await fetch(`${MAILPIT}/api/v1/search?query=${encodeURIComponent(`"${needle}"`)}`)
+            return res.ok ? (((await res.json()) as { messages_count?: number }).messages_count ?? 0) : 0
+          },
+          { timeout: 30_000 },
+        )
+        .toBeGreaterThan(0)
+    }
   })
 })
 
@@ -283,16 +284,13 @@ test.describe('the installable app', () => {
     })
     const page = await ctx.newPage()
     await page.goto('/login')
-    await page.waitForFunction(
-      () => navigator.serviceWorker?.controller !== null || navigator.serviceWorker?.ready.then(() => true),
-      null,
-      { timeout: 30_000 },
-    )
+    // the browser's service worker API, typed loosely because the suite compiles without the DOM library
+    type Workers = { serviceWorker: { ready: Promise<unknown>; getRegistrations(): Promise<unknown[]> } }
+    await page.evaluate(async () => (navigator as unknown as Workers).serviceWorker.ready)
     const registrations = await page.evaluate(
-      async () => (await navigator.serviceWorker.getRegistrations()).length,
+      async () => (await (navigator as unknown as Workers).serviceWorker.getRegistrations()).length,
     )
     expect(registrations).toBeGreaterThan(0)
     await ctx.close()
-    void PERSONAS
   })
 })

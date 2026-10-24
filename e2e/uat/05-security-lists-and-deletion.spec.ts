@@ -2,7 +2,13 @@ import { expect, test } from '@playwright/test'
 import { Api } from './support/api'
 import { authFile } from './support/auth'
 import { CUSTOMER } from './support/env'
-import { createApplication, createCollateral, createGuarantor, createStakeholder } from './support/data'
+import {
+  createApplication,
+  createBranch,
+  createCollateral,
+  createGuarantor,
+  createStakeholder,
+} from './support/data'
 import { confirmDialog, dialog, expectAppReadable, modal, money, toasts, unique } from './support/ui'
 
 test.use({ storageState: authFile('officer') })
@@ -10,6 +16,10 @@ test.use({ storageState: authFile('officer') })
 test.describe('UAT-20, UAT-25 and UAT-27: manage collateral, guarantors and stakeholders from their lists', () => {
   test('UAT-20 a collateral of the CMC list is edited and saved', async ({ page }) => {
     const description = `Printing press, edited ${unique()}`
+    const api = await Api.as('officer')
+    // what the form must show is what is stored now: 'Printing press machinery' after a seed, the last edit after earlier runs
+    const before = (await api.get('/api/v1/collaterals', { search: 'UAT-CMC-0004' })).body.data[0]
+    expect(before.CollateralDescription).toMatch(/^Printing press/)
     await page.goto('/home')
     await page.getByRole('link', { name: 'Manage Collateral' }).click()
     await expect(page).toHaveURL(/\/cmc-list/)
@@ -17,14 +27,13 @@ test.describe('UAT-20, UAT-25 and UAT-27: manage collateral, guarantors and stak
     await expect(page.getByRole('row', { name: /UAT-CMC-0004/ })).toHaveCount(1)
     await page.getByRole('button', { name: 'Edit UAT-CMC-0004' }).click()
     const form = modal(page)
-    await expect(form.locator('#cm-description')).toHaveValue('Printing press machinery')
+    await expect(form.locator('#cm-description')).toHaveValue(before.CollateralDescription)
     await form.locator('#cm-description').fill(description)
     await money(form, 'CollateralOpenMarketValue').fill('130000000')
     await form.getByRole('button', { name: 'Save' }).click()
     await expect(toasts(page).filter({ hasText: 'Collateral Saved Successfully' })).toBeVisible()
     await expectAppReadable(page)
     await expect(page.getByRole('row', { name: /UAT-CMC-0004/ })).toContainText('130,000,000')
-    const api = await Api.as('officer')
     const rows = await api.get('/api/v1/collaterals', { search: 'UAT-CMC-0004' })
     expect(rows.body.data[0].CollateralDescription).toBe(description)
     expect(rows.body.data[0].CollateralOpenMarketValue).toBe('130000000')
@@ -98,27 +107,29 @@ test.describe('UAT-20, UAT-25 and UAT-27: manage collateral, guarantors and stak
   test('UAT-27 a stakeholder of the BS list is edited and saved', async ({ page }) => {
     const percentage = String(10 + Math.floor(Math.random() * 30))
     await page.goto('/home')
-    await page
-      .getByRole('link', { name: 'Manage Borrower Stakeholder' })
-      .click()
-      .catch(async () => page.goto('/bs-list'))
-    await page.goto('/bs-list')
+    await page.getByRole('link', { name: '+ Borrower Stakeholder' }).click()
+    await expect(page).toHaveURL(/\/bs-list/)
+    // Ssekandi David is also a stakeholder of other borrowers in later runs: the row of Nile Traders Ltd is the one to change
     await page.getByLabel('Search stakeholders').fill('Ssekandi')
-    await expect(page.getByRole('row', { name: /Ssekandi David/ })).toHaveCount(1)
-    await page.getByRole('button', { name: `Edit stakeholder ${CUSTOMER.jointPartner}` }).click()
+    const row = page.getByRole('row', { name: /Ssekandi David.*Nile Traders/ })
+    await expect(row).toHaveCount(1)
+    await row.getByRole('button', { name: `Edit stakeholder ${CUSTOMER.jointPartner}` }).click()
     const form = modal(page)
     await expect(form.getByLabel('Client number')).toHaveValue(CUSTOMER.jointPartner)
     await form.locator('input[name="ShareholderPercentage"]').fill(percentage)
     await form.getByRole('button', { name: 'Save' }).click()
     await expect(toasts(page).filter({ hasText: 'Stakeholder Saved Successfully' })).toBeVisible()
     await expectAppReadable(page)
-    await expect(page.getByRole('row', { name: /Ssekandi David/ })).toContainText(`${percentage}%`)
+    await expect(page.getByRole('row', { name: /Ssekandi David.*Nile Traders/ })).toContainText(
+      `${percentage}%`,
+    )
     const api = await Api.as('officer')
     const rows = await api.get('/api/v1/stakeholders', { search: 'Ssekandi' })
-    expect(
-      rows.body.data.find((s: any) => s.StakeholderClientNumber === CUSTOMER.jointPartner)
-        .ShareholderPercentage,
-    ).toBe(percentage)
+    const edited = rows.body.data.find(
+      (s: any) =>
+        s.StakeholderClientNumber === CUSTOMER.jointPartner && s.BorrowerClientNumber === CUSTOMER.company,
+    )
+    expect(edited.ShareholderPercentage).toBe(percentage)
     await api.dispose()
   })
 
@@ -343,6 +354,80 @@ test.describe('UAT-19, UAT-21, UAT-26 and UAT-28: deleting needs a request and a
     expect((await maker.get(`/api/v1/applications/${app.id}`)).status).toBe(404)
     const list = await maker.get('/api/v1/applications', { search: app.creditApplicationReference })
     expect(list.body.data).toHaveLength(0)
+    await maker.dispose()
+    await checker.dispose()
+  })
+
+  test('the Requests page filters by status, searches by request id and shows the record of a request', async ({
+    browser,
+  }) => {
+    const maker = await Api.as('officer')
+    const checker = await Api.as('checker')
+    const app = await createApplication(maker, { clientNumber: CUSTOMER.spare[0] })
+    const approvedCollateral = await createCollateral(maker, app.creditApplicationReference)
+    const canceledCollateral = await createCollateral(maker, app.creditApplicationReference)
+    const pendingCollateral = await createCollateral(maker, app.creditApplicationReference)
+    const ask = async (collateral: any, comment: string) => {
+      await maker.must(
+        maker.post('/api/v1/deletion-requests', {
+          record_id: collateral.id,
+          table_name: 'collaterals',
+          comment,
+        }),
+        'request',
+      )
+      return requestOf(maker, 'collaterals', collateral.id)
+    }
+    const approved = await ask(approvedCollateral, 'to be approved')
+    const canceled = await ask(canceledCollateral, 'to be canceled')
+    const pending = await ask(pendingCollateral, 'still waiting')
+    await checker.must(checker.post(`/api/v1/deletion-requests/${approved.id}/approve`, {}), 'approve')
+    await checker.must(checker.post(`/api/v1/deletion-requests/${canceled.id}/cancel`, {}), 'cancel')
+
+    const ctx = await browser.newContext({ storageState: authFile('checker') })
+    const page = await ctx.newPage()
+    await page.goto('/requests')
+    // pending is the first filter; search stays inside the filter
+    await page.getByTestId('search').fill(pending.request_id)
+    await expect(page.getByTestId(`request-${pending.id}`)).toContainText('Pending Approval')
+    await expect(page.getByTestId(`request-${pending.id}`).getByTestId('approve')).toBeVisible()
+    await page.getByTestId('search').fill(approved.request_id)
+    await expect(page.getByTestId(`request-${approved.id}`)).toHaveCount(0)
+    await page.getByTestId('status').selectOption('1')
+    await expect(page.getByTestId(`request-${approved.id}`).getByTestId('approved-badge')).toBeVisible()
+    await expect(page.getByTestId(`request-${approved.id}`).getByTestId('actioned')).toContainText('Chidi')
+    await page.getByTestId('search').fill(canceled.request_id)
+    await page.getByTestId('status').selectOption('2')
+    await expect(page.getByTestId(`request-${canceled.id}`).getByTestId('canceled-badge')).toBeVisible()
+
+    // the record of a request that is still pending: its own columns, never a secret
+    await page.getByTestId('status').selectOption('0')
+    await page.getByTestId('search').fill(pending.request_id)
+    await page.getByTestId(`request-${pending.id}`).getByTestId('view').click()
+    const record = page.getByTestId('record-table')
+    await expect(record).toContainText(pendingCollateral.CollateralReferenceNumber)
+    await expect(record).not.toContainText(/password|remember_token/i)
+    await ctx.close()
+
+    // somebody who may view requests but neither approve nor cancel them sees only the own (D-1021 of deletion): the
+    // branch officer asks for a branch to be deleted and sees that request, and not the ones of the officer above
+    const viewer = await Api.as('crb')
+    const branch = await createBranch(viewer)
+    await viewer.must(
+      viewer.post('/api/v1/deletion-requests', {
+        record_id: branch.id,
+        table_name: 'bank_branches',
+        comment: 'visibility',
+      }),
+      'branch request',
+    )
+    const own = await viewer.get('/api/v1/deletion-requests', { status: 0 })
+    expect(own.status).toBe(200)
+    const names = new Set(own.body.data.map((r: any) => r.requested_by_name))
+    expect([...names]).toEqual(['Cora Operator'])
+    const all = await checker.get('/api/v1/deletion-requests', { status: 0 })
+    expect(all.body.total).toBeGreaterThan(own.body.total)
+    await viewer.dispose()
     await maker.dispose()
     await checker.dispose()
   })

@@ -3,9 +3,9 @@ import { expect, test } from '@playwright/test'
 import { Api } from './support/api'
 import { authFile } from './support/auth'
 import { CUSTOMER } from './support/env'
-import { application, createApplication, nextPoolLoan, profileId } from './support/data'
+import { application, createApplication, nextFromPool, nextPoolLoan } from './support/data'
 import { buildXlsx, readXlsx } from './support/xlsx'
-import { confirmDialog, dialog, expectAppReadable, toasts, uniqueAmount } from './support/ui'
+import { confirmDialog, dialog, expectAppReadable, uniqueAmount } from './support/ui'
 
 const xlsxType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
@@ -45,14 +45,15 @@ test.describe('credit applications: list, filters and the detail page', () => {
 
   test('the details of an application show its loan, amount, term and status', async ({ page }) => {
     const officer = await Api.as('officer')
+    const amount = uniqueAmount()
     const app = await createApplication(officer, {
       clientNumber: CUSTOMER.main,
-      amount: '31415926',
+      amount,
       term: '2',
       termPeriod: 'Year',
     })
     await page.goto(`/applications/show/${app.id}`)
-    await expect(page.getByText('UGX 31,415,926').first()).toBeVisible()
+    await expect(page.getByText(`UGX ${Number(amount).toLocaleString('en-US')}`).first()).toBeVisible()
     await expect(page.getByText('2 Years').first()).toBeVisible()
     await page.getByRole('button', { name: 'Show / Hide' }).click()
     await expect(page.getByRole('cell', { name: app.creditApplicationReference }).first()).toBeVisible()
@@ -180,9 +181,9 @@ test.describe('joint application and bulk approval', () => {
       .click()
     await page.getByRole('menuitem', { name: 'Joint Application' }).click()
     const pickBox = page.getByPlaceholder('search customer by name')
-    await pickBox.fill('Nantongo')
+    await pickBox.fill('Nantongo Judith')
     await page.getByRole('button', { name: /Nantongo Judith/ }).click()
-    await pickBox.fill('Ssemwogerere')
+    await pickBox.fill('Ssemwogerere Paul')
     await page.getByRole('button', { name: /Ssemwogerere Paul/ }).click()
     await page.getByRole('button', { name: 'PROCEED' }).click()
     await expect(page).toHaveURL(/\/applications\/joint\/create\//)
@@ -220,13 +221,15 @@ test.describe('joint application and bulk approval', () => {
 
   test('a joint application with a duplicate borrower saves nothing at all', async () => {
     const api = await Api.as('officer')
-    const first = await createApplication(api, { clientNumber: CUSTOMER.spare[3], amount: '44444444' })
+    const amountA = uniqueAmount()
+    const amountB = String(Number(amountA) + 1)
+    const first = await createApplication(api, { clientNumber: CUSTOMER.spare[3], amount: amountA })
     const dup = await api.post('/api/v1/applications/joint', {
       borrowers: [
         {
           clientNumber: CUSTOMER.spare[3],
           creditApplicationDate: first.creditApplicationDate.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'),
-          amount: '44444444',
+          amount: amountA,
           currency: 'UGX',
           CreditAccountLoanProductType: '2',
           loanPurpose: '1',
@@ -237,7 +240,7 @@ test.describe('joint application and bulk approval', () => {
         {
           clientNumber: CUSTOMER.spare[4],
           creditApplicationDate: first.creditApplicationDate.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3'),
-          amount: '55555555',
+          amount: amountB,
           currency: 'UGX',
           CreditAccountLoanProductType: '2',
           loanPurpose: '1',
@@ -249,7 +252,7 @@ test.describe('joint application and bulk approval', () => {
     })
     expect(dup.status).toBe(409)
     const list = await api.get('/api/v1/applications', { search: CUSTOMER.spare[4] })
-    expect(list.body.data.filter((a: any) => a.Amount === '55555555')).toHaveLength(0)
+    expect(list.body.data.filter((a: any) => a.Amount === amountB)).toHaveLength(0)
     await api.dispose()
   })
 
@@ -311,8 +314,6 @@ test.describe('joint application and bulk approval', () => {
     await ctx.close()
     await officer.dispose()
     await approver.dispose()
-    void toasts
-    void profileId
   })
 
   test('bulk approval is closed to a user without Approve/Reject Applications', async ({ browser }) => {
@@ -328,24 +329,53 @@ test.describe('joint application and bulk approval', () => {
   })
 })
 
-test.describe('profiles: classification and deletion request of a whole profile', () => {
+test.describe('profiles: deletion request of a whole profile', () => {
   test.use({ storageState: authFile('officer') })
 
-  test('a profile is requested for deletion by its whole and removed by the checker', async ({ page }) => {
+  test('a profile is requested for deletion as a whole and the checker removes the customer', async ({
+    page,
+  }) => {
     const officer = await Api.as('officer')
     const checker = await Api.as('checker')
-    const id = await profileId(officer, CUSTOMER.deletion)
+    const crb = await Api.as('crb')
+    const victim = await nextFromPool(crb, 'CUSTDEL')
     await page.goto('/profiles')
-    await page.getByPlaceholder('Search by name, client no, FCS no...').fill(CUSTOMER.deletion)
-    await page.getByRole('button', { name: /Request deletion of Nabirye/ }).click()
-    // the first question is which record to remove: the whole profile
+    await page.getByPlaceholder('Search by name, client no, FCS no...').fill(victim.code)
+    await expect(page.getByRole('button', { name: /Request deletion of/ })).toHaveCount(1)
+    await page.getByRole('button', { name: /Request deletion of/ }).click()
+    // the first question: a customer with one record can only be removed as a whole profile
+    await expect(dialog(page)).toContainText('Delete Customer Profile')
+    await expect(page.getByRole('radio', { name: /Delete entire profile/ })).toBeChecked()
+    await page.getByRole('button', { name: 'Next' }).click()
+    await expect(dialog(page)).toContainText('permanently delete the entire profile')
+    await page.locator('.swal2-textarea').fill('Captured by mistake')
+    await page.getByRole('button', { name: 'Yes, Submit Request' }).click()
     await expect(dialog(page)).toBeVisible()
-    const text = await dialog(page).innerText()
-    expect(text).toMatch(/profile|record|delete/i)
-    void id
-    void checker
-    await page.keyboard.press('Escape')
+    await confirmDialog(page, 'OK')
+    await expect(page.getByRole('img', { name: 'Deletion requested' })).toBeVisible()
+    await expectAppReadable(page)
+
+    const requests = await officer.get('/api/v1/deletion-requests', { search: String(victim.id), status: 0 })
+    const request = requests.body.data.find(
+      (r: any) => r.table_name === 'customers' && r.record_id === victim.id,
+    )
+    expect(request.deletion_scope).toBe('customer_full')
+    // still there until the checker decides; asking again is refused
+    expect((await officer.get('/api/v1/profiles', { search: victim.code })).body.data).toHaveLength(1)
+    expect(
+      (
+        await officer.post('/api/v1/deletion-requests', {
+          record_id: victim.id,
+          table_name: 'customers',
+          deletion_scope: 'customer_full',
+          comment: 'again',
+        })
+      ).status,
+    ).toBe(409)
+    expect((await checker.post(`/api/v1/deletion-requests/${request.id}/approve`, {})).status).toBe(200)
+    expect((await officer.get('/api/v1/profiles', { search: victim.code })).body.data).toHaveLength(0)
     await officer.dispose()
     await checker.dispose()
+    await crb.dispose()
   })
 })

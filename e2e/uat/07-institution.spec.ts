@@ -54,7 +54,7 @@ test.describe('bounced cheques: upload and list', () => {
     await page.getByRole('link', { name: 'Upload Bounced Cheques' }).click()
     await expect(page).toHaveURL(/\/upload-bounced-cheques/)
     await page
-      .locator('input[type="file"]')
+      .locator('#app input[type="file"]')
       .setInputFiles({ name: 'cheques.xlsx', mimeType: xlsxType, buffer: buildXlsx(rows) })
     await page.getByRole('button', { name: 'Upload' }).click()
     await expect(page).toHaveURL(/\/bc-list/)
@@ -96,7 +96,7 @@ test.describe('bounced cheques: upload and list', () => {
     await page.getByRole('button', { name: 'Upload' }).click()
     await expect(dialog(page)).toContainText('No file uploaded. Please upload a Bounced Cheques Template!')
     await confirmDialog(page, 'OK')
-    await page.locator('input[type="file"]').setInputFiles({
+    await page.locator('#app input[type="file"]').setInputFiles({
       name: 'wrong.xlsx',
       mimeType: xlsxType,
       buffer: buildXlsx([
@@ -121,7 +121,7 @@ test.describe('bounced cheques: upload and list', () => {
       [`0100917001/${CUSTOMER.bounced}`, 'abc', 'BADROW1', 'x', 'UGX', '', 'not a date', ''],
     ])
     await page
-      .locator('input[type="file"]')
+      .locator('#app input[type="file"]')
       .setInputFiles({ name: 'bad.xlsx', mimeType: xlsxType, buffer: bad })
     await page.getByRole('button', { name: 'Upload' }).click()
     await expect(dialog(page)).toContainText(/not a number|not a valid date/)
@@ -148,7 +148,7 @@ test.describe('bounced cheques: upload and list', () => {
       'Days In Arrears',
     ]
     await page.goto('/upload-fully-paid-or-write-offs')
-    await page.locator('input[type="file"]').setInputFiles({
+    await page.locator('#app input[type="file"]').setInputFiles({
       name: 'fully-paid.xlsx',
       mimeType: xlsxType,
       buffer: buildXlsx([
@@ -195,13 +195,15 @@ test.describe('fraud (financial malpractice)', () => {
     await page.getByRole('link', { name: '+ New Financial Malpractice' }).click()
     await expect(page).toHaveURL(/\/fraud/)
     await page.getByRole('button', { name: 'Register Fraud' }).click()
-    await page.getByLabel('Search Customers').fill('Mukasa')
+    await page.getByLabel('Search Customers', { exact: true }).fill('Mukasa')
     await page
       .getByRole('row', { name: /Mukasa Francis/ })
       .getByRole('button', { name: 'Select' })
       .click()
     const form = modal(page)
-    await expect(form.getByLabel('Client number', { exact: false }).first()).toBeVisible()
+    // the chosen customer's profile is copied into the form
+    await expect(form.getByRole('textbox', { name: 'Firstname' })).toHaveValue('Francis')
+    await expect(form.getByRole('textbox', { name: 'Surname' })).toHaveValue('Mukasa')
     await form.locator('select[name="fraudCategory"]').selectOption('2')
     await pickDate(page, 'incident_day', 'incident_month', 'incident_year', { d: '5', m: '8', y: '2026' })
     await money(form, 'saving_amount').fill('100000')
@@ -270,7 +272,7 @@ test.describe('participating institution, its stakeholders and the branches', ()
     await expect(page).toHaveURL(/\/pis/)
     await page.getByRole('button', { name: 'New PIS ▾' }).click()
     await page.getByRole('menuitem', { name: 'Existing Profile' }).click()
-    await page.getByLabel('Search Customers').fill('Ochieng')
+    await page.getByLabel('Search Customers', { exact: true }).fill('Ochieng')
     await page
       .getByRole('row', { name: /Ochieng Brian/ })
       .getByRole('button', { name: 'Use' })
@@ -297,6 +299,13 @@ test.describe('participating institution, its stakeholders and the branches', ()
   test('a branch is created, changed and customers are moved between two branches', async ({ page }) => {
     const code = `T${Date.now().toString().slice(-6)}`
     const name = `UAT Branch ${unique()}`
+    // customers moved by an earlier run that stopped half way are brought back first (409 when there is nothing to move)
+    const reset = await Api.as('crb')
+    expect([200, 409]).toContain(
+      (await reset.post('/api/v1/bank-branches/transfer-customers', { from_branch: 'U02', to_branch: 'U01' }))
+        .status,
+    )
+    await reset.dispose()
     await page.goto('/branches')
     await page.getByRole('link', { name: 'New Branch' }).click()
     await page.locator('input[name="BranchName"]').fill(name)
@@ -350,15 +359,16 @@ test.describe('participating institution, its stakeholders and the branches', ()
     await page.getByRole('button', { name: 'Begin Transfer' }).click()
     await expect(dialog(page)).toContainText('transfer customers')
     await confirmDialog(page, 'Yes, Proceed!')
-    await expect(dialog(page)).toContainText(/transferred|Transferred|customers/)
+    await expect(dialog(page)).toContainText('Customers transferred successfully!')
     await confirmDialog(page, 'OK')
     await expectAppReadable(page)
     const api = await Api.as('crb')
     const moved = await api.get('/api/v1/borrowers/customers', { search: 'Transfera' })
     expect(moved.body.data[0].branchCode).toBe('U02')
-    await api
-      .post('/api/v1/bank-branches/transfer-customers', { from: 'U02', to: 'U01' })
-      .catch(() => undefined)
+    await api.must(
+      api.post('/api/v1/bank-branches/transfer-customers', { from_branch: 'U02', to_branch: 'U01' }),
+      'move the customers back',
+    )
     await api.dispose()
   })
 

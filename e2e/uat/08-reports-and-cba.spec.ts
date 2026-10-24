@@ -107,7 +107,8 @@ test.describe('the CBA file, built in the background', () => {
   test('CBA generation is queued, followed on the Background Processes page and downloaded when it is done', async ({
     page,
   }) => {
-    await fillReportForm(page, 'CBA')
+    // the loans of the fixtures were submitted for the end of September: that is the date the CBA is asked for
+    await fillReportForm(page, 'CBA', undefined, { d: '30', m: '9', y: '2026' })
     await expect(page.getByTestId('from-block')).toBeHidden()
     await expect(page.getByTestId('short-cba')).toBeVisible()
     await page.getByTestId('download').click()
@@ -118,31 +119,36 @@ test.describe('the CBA file, built in the background', () => {
     await expect(page).toHaveURL(/\/background-processes/)
     await expectAppReadable(page)
 
-    // the newest process is the CBA run; it ends as completed and offers the file
+    // the run is a generation process and then a cleanup process; the cleanup one holds the file
     const api = await Api.as('crb')
-    let process: any
-    await expect
-      .poll(
-        async () => {
-          const list = await api.get('/api/v1/background-processes')
-          process = (list.body.data ?? []).find((p: any) => /cba/i.test(p.type))
-          return process?.status
-        },
-        { timeout: 150_000, intervals: [2000] },
-      )
-      .toMatch(/completed|failed/)
-    expect(process.status, `CBA process: ${process.error_message ?? process.progress_label}`).toBe(
-      'completed',
-    )
+    const waitFor = async (type: RegExp) => {
+      let found: any
+      await expect
+        .poll(
+          async () => {
+            const list = await api.get('/api/v1/background-processes')
+            found = (list.body.data ?? []).find((p: any) => type.test(p.type))
+            return found?.status
+          },
+          { timeout: 180_000, intervals: [2000] },
+        )
+        .toMatch(/completed|failed/)
+      expect(found.status, `${found.type}: ${found.error_message ?? found.progress_label}`).toBe('completed')
+      return found
+    }
+    await waitFor(/^cba_generation$/)
+    const process = await waitFor(/^cba_cleanup$/)
     expect(process.has_file).toBe(true)
 
+    // the page shows what the server finished with after it is opened again
+    await page.reload()
     const row = page.getByTestId(`process-${process.id}`)
     await expect(row.getByTestId('badge')).toContainText(/Completed/i)
     const download = page.waitForEvent('download')
     await row.getByTestId('download').click()
     const file = await download
     const text = await textOf(file)
-    expect(file.suggestedFilename()).toMatch(/CBA/i)
+    expect(file.suggestedFilename()).toBe('CB01120260930CBA.csv')
     // the loans of the fixture customers are in the file, the ignored one is not
     expect(text).toContain('UATLN0001')
     expect(text).toContain('UATLN0004')
@@ -153,13 +159,13 @@ test.describe('the CBA file, built in the background', () => {
   test('a second CBA run while the first is active is refused with the reason', async () => {
     const api = await Api.as('crb')
     const first = await api.post('/api/v1/cba/generate', {
-      toDate: '2026-10-31',
+      toDate: '2026-09-30',
       version: '8.0',
       useCached: false,
     })
     expect(first.status).toBe(202)
     const second = await api.post('/api/v1/cba/generate', {
-      toDate: '2026-10-31',
+      toDate: '2026-09-30',
       version: '8.0',
       useCached: false,
     })

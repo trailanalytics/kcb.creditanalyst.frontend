@@ -2,8 +2,8 @@ import { expect, test } from '@playwright/test'
 import { Api } from './support/api'
 import { authFile } from './support/auth'
 import { CUSTOMER } from './support/env'
-import { profile, profileId } from './support/data'
-import { dialog, toasts, unique } from './support/ui'
+import { nextFromPool, profile, profileId } from './support/data'
+import { confirmDialog, dialog, expectAppReadable, toasts, unique } from './support/ui'
 
 test.use({ storageState: authFile('officer') })
 
@@ -75,6 +75,32 @@ test.describe('UAT-04 and UAT-05: update a borrower profile', () => {
     await api.dispose()
     await page.reload()
     await expect(page.locator('input[name="EI_EmployerName"]')).toHaveValue(special)
+  })
+
+  test('the classification of a customer is changed after the question, and backing out changes nothing', async ({
+    page,
+  }) => {
+    const crb = await Api.as('crb')
+    const victim = await nextFromPool(crb, 'CUSTDEL')
+    await page.goto(`/borrowers/edit/${victim.id}`)
+    const select = page.locator('select[name="classificationCode"]')
+    await expect(select).toHaveValue('0')
+    // backing out: the select goes back to what it was
+    await select.selectOption('1')
+    await expect(dialog(page)).toContainText(
+      'change the classification of this client from Individual to Non Individual',
+    )
+    await page.locator('.swal2-cancel').click()
+    await expect(select).toHaveValue('0')
+    // confirming swaps the record: the company fields appear
+    await select.selectOption('1')
+    await confirmDialog(page, 'Yes, Proceed')
+    await expect(dialog(page)).toContainText('Client classification updated successfully!')
+    await confirmDialog(page, 'OK')
+    await expectAppReadable(page)
+    await expect(page.locator('input[name="GSCAFB_BusinessName"]')).toBeVisible()
+    expect((await profile(crb, victim.code)).classificationCode).toBe('1')
+    await crb.dispose()
   })
 
   test('the profile page and the edit page follow the permissions of the user', async ({ browser }) => {
