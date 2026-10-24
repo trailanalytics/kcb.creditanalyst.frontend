@@ -88,7 +88,8 @@ async function submit() {
       errors.value = problem.errors
     } else if (axios.isAxiosError(e) && e.response?.status === 401) {
       await router.replace({ name: 'login' })
-    } else {
+    } else if (!(axios.isAxiosError(e) && (e.response?.status ?? 0) >= 500)) {
+      // an unexpected server error already got its dialog with the reference from the global handler
       await swalNotification('error', messageOf(e))
     }
   } finally {
