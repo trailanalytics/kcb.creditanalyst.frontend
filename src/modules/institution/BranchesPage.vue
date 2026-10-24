@@ -4,14 +4,21 @@ import { RouterLink } from 'vue-router'
 import { useCollection } from '@/composables/useCollection'
 import InfiniteScroll from '@/components/ui/InfiniteScroll.vue'
 import { useAuthStore } from '@/stores/auth'
+import DeleteButton from '@/modules/requests/components/DeleteButton.vue'
+import { requestDeletion } from '@/modules/requests/deletionFlow'
 import TransferDialog from './components/TransferDialog.vue'
 import type { BankBranch } from './types'
 
 /** /branches: the bank's branches, newest first, with the customer transfer (branches/index.blade.php + IbIndex.vue). */
 const auth = useAuthStore()
-const { items, loading, completed, loadMore, reload } = useCollection<BankBranch>('/bank-branches')
+const { items, loading, completed, loadMore, reload, updateItem } =
+  useCollection<BankBranch>('/bank-branches')
 const transferOpen = ref(false)
 onMounted(loadMore)
+
+async function remove(b: BankBranch) {
+  if (await requestDeletion('branch', b.id)) updateItem({ id: b.id, is_deleted: true })
+}
 </script>
 
 <template>
@@ -59,13 +66,20 @@ onMounted(loadMore)
                 title="This record has been requested to be deleted!"
                 >⚑</span
               >
-              <RouterLink
-                v-else-if="auth.has('Update Branches')"
-                :to="`/branches/edit/${b.id}`"
-                class="text-primary-1"
-                :aria-label="`Edit ${b.BranchName}`"
-                >✎</RouterLink
-              >
+              <template v-else>
+                <RouterLink
+                  v-if="auth.has('Update Branches')"
+                  :to="`/branches/edit/${b.id}`"
+                  class="text-primary-1"
+                  :aria-label="`Edit ${b.BranchName}`"
+                  >✎</RouterLink
+                >
+                <DeleteButton
+                  v-if="auth.has('Delete Branches')"
+                  :label="`Request deletion of ${b.BranchName}`"
+                  @click="remove(b)"
+                />
+              </template>
             </td>
           </tr>
         </tbody>

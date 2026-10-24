@@ -6,18 +6,26 @@ import {
   DropdownMenuItem,
   DropdownMenuPortal,
   DropdownMenuRoot,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from 'reka-ui'
 import { useCollection } from '@/composables/useCollection'
 import InfiniteScroll from '@/components/ui/InfiniteScroll.vue'
+import { requestDeletion } from '@/modules/requests/deletionFlow'
+import { useAuthStore } from '@/stores/auth'
 import { formatNumber } from '@/utils/format'
 import { statusLabel, termText } from './loanModel'
 import type { Application } from './types'
 
 /** /applications: the CAP list (cap/index.blade.php + CapIndex.vue). */
-const { items, search, queryFilter, loading, completed, loadMore, changeFilter } =
+const auth = useAuthStore()
+const { items, search, queryFilter, loading, completed, loadMore, changeFilter, updateItem } =
   useCollection<Application>('/applications')
 onMounted(loadMore)
+
+async function remove(a: Application) {
+  if (await requestDeletion('application', a.id)) updateItem({ id: a.id, is_deleted: true })
+}
 
 const statusClass = (s: string | null) =>
   s === '2' ? 'text-amber-600' : s === '0' ? 'text-success' : 'text-danger'
@@ -138,6 +146,14 @@ const idLabel = (a: Application) =>
                       >Edit Loan</RouterLink
                     >
                   </DropdownMenuItem>
+                  <template v-if="auth.has('Delete Applications')">
+                    <DropdownMenuSeparator class="my-1 h-px bg-slate-200" />
+                    <DropdownMenuItem
+                      class="block cursor-pointer px-4 py-2 text-sm text-danger outline-none data-[highlighted]:bg-slate-100"
+                      @select="remove(a)"
+                      >Delete Loan</DropdownMenuItem
+                    >
+                  </template>
                 </DropdownMenuContent>
               </DropdownMenuPortal>
             </DropdownMenuRoot>

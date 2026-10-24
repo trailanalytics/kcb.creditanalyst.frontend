@@ -11,6 +11,8 @@ import {
 import { useCollection } from '@/composables/useCollection'
 import InfiniteScroll from '@/components/ui/InfiniteScroll.vue'
 import type { CustomerRow } from '@/modules/customer/types'
+import DeleteButton from '@/modules/requests/components/DeleteButton.vue'
+import { requestDeletion } from '@/modules/requests/deletionFlow'
 import { useAuthStore } from '@/stores/auth'
 import { useReferenceStore } from '@/stores/reference'
 import ExistingCustomerModal from './components/ExistingCustomerModal.vue'
@@ -20,13 +22,17 @@ import type { Stakeholder } from './types'
 const auth = useAuthStore()
 const reference = useReferenceStore()
 const router = useRouter()
-const { items, loading, completed, loadMore } = useCollection<Stakeholder>('/pi-stakeholders')
+const { items, loading, completed, loadMore, updateItem } = useCollection<Stakeholder>('/pi-stakeholders')
 const pickerOpen = ref(false)
 
 onMounted(() => {
   void reference.load('stakeholder-categories')
   void loadMore()
 })
+
+async function remove(s: Stakeholder) {
+  if (await requestDeletion('pis', s.id)) updateItem({ id: s.id, is_deleted: true })
+}
 
 function useProfile(customer: CustomerRow) {
   pickerOpen.value = false
@@ -94,13 +100,20 @@ function useProfile(customer: CustomerRow) {
                 title="This record has been requested to be deleted!"
                 >⚑</span
               >
-              <RouterLink
-                v-else-if="auth.has('Update PIS')"
-                :to="`/edit/pis/${s.id}`"
-                class="text-primary-1"
-                :aria-label="`Edit ${s.clientNumber}`"
-                >✎</RouterLink
-              >
+              <template v-else>
+                <RouterLink
+                  v-if="auth.has('Update PIS')"
+                  :to="`/edit/pis/${s.id}`"
+                  class="text-primary-1"
+                  :aria-label="`Edit ${s.clientNumber}`"
+                  >✎</RouterLink
+                >
+                <DeleteButton
+                  v-if="auth.has('Delete PIS')"
+                  :label="`Request deletion of ${s.clientNumber}`"
+                  @click="remove(s)"
+                />
+              </template>
             </td>
           </tr>
         </tbody>

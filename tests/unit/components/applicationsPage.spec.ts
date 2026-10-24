@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount, RouterLinkStub } from '@vue/test-utils'
+import { createPinia } from 'pinia'
 
 vi.mock('@/api/http', () => ({ http: { get: vi.fn() } }))
 import { http } from '@/api/http'
@@ -38,7 +39,9 @@ describe('ApplicationsPage', () => {
 
   it('lists applications with the amounts, terms and statuses the old list showed', async () => {
     vi.mocked(http.get).mockResolvedValue(page([row(1, '2'), row(2, '0'), row(3, '5')]) as never)
-    const w = mount(ApplicationsPage, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    const w = mount(ApplicationsPage, {
+      global: { plugins: [createPinia()], stubs: { RouterLink: RouterLinkStub } },
+    })
     await flushPromises()
     const text = w.text()
     expect(text).toContain('Okello James Peter')
@@ -52,7 +55,9 @@ describe('ApplicationsPage', () => {
 
   it('shows a deletion flag instead of actions for a record with a pending deletion request', async () => {
     vi.mocked(http.get).mockResolvedValue(page([row(1, '2', { is_deleted: true })]) as never)
-    const w = mount(ApplicationsPage, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    const w = mount(ApplicationsPage, {
+      global: { plugins: [createPinia()], stubs: { RouterLink: RouterLinkStub } },
+    })
     await flushPromises()
     expect(w.find('[title="This record has been requested to be deleted!"]').exists()).toBe(true)
     expect(w.text()).not.toContain('Loan Details')
@@ -60,7 +65,9 @@ describe('ApplicationsPage', () => {
 
   it('reloads from the first page with the chosen filter', async () => {
     vi.mocked(http.get).mockResolvedValue(page([row(1, '2')]) as never)
-    const w = mount(ApplicationsPage, { global: { stubs: { RouterLink: RouterLinkStub } } })
+    const w = mount(ApplicationsPage, {
+      global: { plugins: [createPinia()], stubs: { RouterLink: RouterLinkStub } },
+    })
     await flushPromises()
     await w.find('select').setValue('rejected')
     await flushPromises()
