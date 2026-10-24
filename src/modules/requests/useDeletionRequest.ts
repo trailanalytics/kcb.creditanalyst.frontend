@@ -3,7 +3,7 @@ import { hideLoader, showLoader, swalDelete, swalNotification, toast } from '@/u
 
 /** What a delete button sends: the record, the table it lives in and why. `deletion_scope` is only `customer_full`. */
 export interface DeletionRequestPayload {
-  record_id: number
+  record_id: number | string
   table_name: string
   deletion_scope?: 'customer_full' | null
   comment: string
@@ -16,7 +16,10 @@ export interface DeletionRequestResult {
 
 /** POST /deletion-requests. Rejects with the axios error (422 validation, 403, 404, 409 already requested); use `deletionErrorMessage` for the text. */
 export function submitDeletionRequest(payload: DeletionRequestPayload): Promise<DeletionRequestResult> {
-  return http.post<DeletionRequestResult>('/deletion-requests', payload).then((r) => r.data)
+  // handled here: the caller shows its own error dialog, so the global 500 dialog must not appear as well
+  return http
+    .post<DeletionRequestResult>('/deletion-requests', payload, { headers: { 'x-handled': '1' } })
+    .then((r) => r.data)
 }
 
 /** The text to show for a failed submit: the first field message of a 422 (reason missing, kind not allowed ...), else the server's detail, else the fallback. */

@@ -4,6 +4,8 @@ import { RouterLink } from 'vue-router'
 import InfiniteScroll from '@/components/ui/InfiniteScroll.vue'
 import { useCollection } from '@/composables/useCollection'
 import { useAuthStore } from '@/stores/auth'
+import DeleteButton from '@/modules/requests/components/DeleteButton.vue'
+import { requestDeletion } from '@/modules/requests/deletionFlow'
 import { formatNumber } from '@/utils/format'
 import PartyBlock from './components/PartyBlock.vue'
 import PartyModal from './components/PartyModal.vue'
@@ -11,10 +13,10 @@ import type { GuarantorRow, PartyStart } from './types'
 
 /**
  * /ccg-list: guarantors of every borrower (ccg/index.blade.php + CcgIndex.vue). There is no "add" here, guarantors are added from a
- * credit application or loan page; this edits. Deleting goes through a deletion request (milestone 7) and is not offered yet.
+ * credit application or loan page; this edits. The trash icon files a deletion request and flags the row.
  */
 const auth = useAuthStore()
-const { items, search, loading, completed, error, loadMore, reload } =
+const { items, search, loading, completed, error, loadMore, reload, updateItem } =
   useCollection<GuarantorRow>('/guarantors')
 onMounted(loadMore)
 
@@ -27,6 +29,10 @@ function edit(row: GuarantorRow) {
   dialog.start = { mode: 'edit', row }
   dialog.version += 1
   dialog.open = true
+}
+
+async function remove(g: GuarantorRow) {
+  if (await requestDeletion('guarantor', g.id)) updateItem({ id: g.id, is_deleted: true })
 }
 </script>
 
@@ -69,15 +75,22 @@ function edit(row: GuarantorRow) {
                 aria-label="Deletion requested"
                 >⚑</span
               >
-              <button
-                v-else-if="auth.has('Update Guarantors')"
-                type="button"
-                class="text-slate-500 hover:text-project"
-                :aria-label="`Edit guarantor ${g.GuarantorClientNumber}`"
-                @click="edit(g)"
-              >
-                ✎
-              </button>
+              <template v-else>
+                <button
+                  v-if="auth.has('Update Guarantors')"
+                  type="button"
+                  class="text-slate-500 hover:text-project"
+                  :aria-label="`Edit guarantor ${g.GuarantorClientNumber}`"
+                  @click="edit(g)"
+                >
+                  ✎
+                </button>
+                <DeleteButton
+                  v-if="auth.has('Delete Guarantors')"
+                  :label="`Request deletion of guarantor ${g.GuarantorClientNumber}`"
+                  @click="remove(g)"
+                />
+              </template>
             </td>
           </tr>
         </tbody>

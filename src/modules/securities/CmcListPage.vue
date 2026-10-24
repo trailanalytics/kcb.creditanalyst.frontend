@@ -4,6 +4,8 @@ import { RouterLink } from 'vue-router'
 import InfiniteScroll from '@/components/ui/InfiniteScroll.vue'
 import { useCollection } from '@/composables/useCollection'
 import { useAuthStore } from '@/stores/auth'
+import DeleteButton from '@/modules/requests/components/DeleteButton.vue'
+import { requestDeletion } from '@/modules/requests/deletionFlow'
 import { formatNumber } from '@/utils/format'
 import CollateralModal from './components/CollateralModal.vue'
 import MapInstrumentsModal from './components/MapInstrumentsModal.vue'
@@ -11,11 +13,11 @@ import type { CollateralRow } from './types'
 
 /**
  * /cmc-list: collateral of every borrower (cmc/index.blade.php + CmcIndex.vue). Collateral is added from a credit application or loan
- * page, so this list only edits. Deleting goes through a deletion request (milestone 7) and is not offered yet; a record that already
- * has a pending request shows the red flag.
+ * page, so this list only edits. The trash icon files a deletion request and flags the row; a record that already has a pending
+ * request shows the red flag.
  */
 const auth = useAuthStore()
-const { items, search, loading, completed, error, loadMore, reload } =
+const { items, search, loading, completed, error, loadMore, reload, updateItem } =
   useCollection<CollateralRow>('/collaterals')
 onMounted(loadMore)
 
@@ -26,6 +28,10 @@ const mapping = ref(false)
 function edit(c: CollateralRow) {
   selected.value = c
   editing.value = true
+}
+
+async function remove(c: CollateralRow) {
+  if (await requestDeletion('collateral', c.id)) updateItem({ id: c.id, is_deleted: true })
 }
 </script>
 
@@ -97,15 +103,22 @@ function edit(c: CollateralRow) {
                 aria-label="Deletion requested"
                 >⚑</span
               >
-              <button
-                v-else-if="auth.has('Update Collateral')"
-                type="button"
-                class="text-slate-500 hover:text-project"
-                :aria-label="`Edit ${c.CollateralReferenceNumber}`"
-                @click="edit(c)"
-              >
-                ✎
-              </button>
+              <template v-else>
+                <button
+                  v-if="auth.has('Update Collateral')"
+                  type="button"
+                  class="text-slate-500 hover:text-project"
+                  :aria-label="`Edit ${c.CollateralReferenceNumber}`"
+                  @click="edit(c)"
+                >
+                  ✎
+                </button>
+                <DeleteButton
+                  v-if="auth.has('Delete Collateral')"
+                  :label="`Request deletion of ${c.CollateralReferenceNumber}`"
+                  @click="remove(c)"
+                />
+              </template>
             </td>
           </tr>
         </tbody>

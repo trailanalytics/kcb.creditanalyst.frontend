@@ -2,12 +2,23 @@
 import { onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useCollection } from '@/composables/useCollection'
+import { useAuthStore } from '@/stores/auth'
 import InfiniteScroll from '@/components/ui/InfiniteScroll.vue'
+import { requestProfileDeletion } from './profileDeletion'
 import type { CustomerRow } from './types'
 
-/** Profiles list (borrowers/index.blade.php + ProfileIndex.vue): infinite list of customers, searchable. */
-const { items, search, loading, completed, error, loadMore } = useCollection<CustomerRow>('/profiles')
+/**
+ * Profiles list (borrowers/index.blade.php + ProfileIndex.vue): infinite list of customers, searchable. With "Delete Profiles" every
+ * row has a Delete button that files a deletion request; a profile with a pending request shows the red flag instead.
+ */
+const auth = useAuthStore()
+const { items, search, loading, completed, error, loadMore, updateItem } =
+  useCollection<CustomerRow>('/profiles')
 onMounted(loadMore)
+
+async function remove(c: CustomerRow) {
+  if (await requestProfileDeletion(c.id)) updateItem({ id: c.id, is_deleted: true })
+}
 </script>
 
 <template>
@@ -43,6 +54,7 @@ onMounted(loadMore)
             <th class="px-4 py-3">Client No</th>
             <th class="px-4 py-3">FCS No</th>
             <th class="px-4 py-3">Classification</th>
+            <th class="px-4 py-3"></th>
           </tr>
         </thead>
         <tbody>
@@ -61,6 +73,26 @@ onMounted(loadMore)
             <td class="px-4 py-3">{{ c.clientNumber }}</td>
             <td class="px-4 py-3">{{ c.II_FCSNumber }}</td>
             <td class="px-4 py-3">{{ c.customer_type }}</td>
+            <td class="px-4 py-3 text-right">
+              <span
+                v-if="c.is_deleted"
+                class="text-danger"
+                title="This record has been requested to be deleted!"
+                role="img"
+                aria-label="Deletion requested"
+                >⚑</span
+              >
+              <button
+                v-else-if="auth.has('Delete Profiles')"
+                type="button"
+                class="rounded border border-danger px-2 py-1 text-xs text-danger hover:bg-danger hover:text-white"
+                title="Request deletion"
+                :aria-label="`Request deletion of ${c.full_name.trim() || 'customer ' + c.clientNumber}`"
+                @click="remove(c)"
+              >
+                Delete
+              </button>
+            </td>
           </tr>
         </tbody>
       </table>

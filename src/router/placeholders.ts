@@ -17,5 +17,4 @@ export const PLACEHOLDERS: Placeholder[] = [
     milestone: 'M9',
     permission: 'Resolve Auto-Approvals',
   },
-  { path: '/requests', title: 'Deletion Requests', milestone: 'M7' },
 ]

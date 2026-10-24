@@ -4,11 +4,17 @@ import { RouterLink } from 'vue-router'
 import { useCollection } from '@/composables/useCollection'
 import InfiniteScroll from '@/components/ui/InfiniteScroll.vue'
 import { useAuthStore } from '@/stores/auth'
+import DeleteButton from '@/modules/requests/components/DeleteButton.vue'
+import { requestDeletion } from '@/modules/requests/deletionFlow'
 import type { UserRow } from './types'
 
 const auth = useAuthStore()
-const { items, search, loading, completed, loadMore } = useCollection<UserRow>('/users')
+const { items, search, loading, completed, loadMore, updateItem } = useCollection<UserRow>('/users')
 onMounted(loadMore)
+
+async function remove(u: UserRow) {
+  if (await requestDeletion('user', u.id)) updateItem({ id: u.id, pendingDeletion: true })
+}
 
 const fullName = (u: UserRow) => `${u.firstname ?? ''} ${u.lastname ?? ''}`.trim()
 </script>
@@ -59,13 +65,15 @@ const fullName = (u: UserRow) => `${u.firstname ?? ''} ${u.lastname ?? ''}`.trim
                 title="This user has been requested to be deleted!"
                 >⚑</span
               >
-              <RouterLink
-                v-else-if="auth.has('Create, Update and Delete Users')"
-                :to="{ name: 'user-edit', params: { id: u.id } }"
-                class="text-primary-1 underline"
-              >
-                Edit
-              </RouterLink>
+              <template v-else-if="auth.has('Create, Update and Delete Users')">
+                <RouterLink
+                  :to="{ name: 'user-edit', params: { id: u.id } }"
+                  class="text-primary-1 underline"
+                >
+                  Edit
+                </RouterLink>
+                <DeleteButton :label="`Request deletion of ${fullName(u) || u.email}`" @click="remove(u)" />
+              </template>
             </td>
           </tr>
         </tbody>

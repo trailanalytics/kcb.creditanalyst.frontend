@@ -11,6 +11,7 @@ import { analysisRoutes } from '@/modules/analysis/routes'
 import { cbaFixRoutes } from '@/modules/cbafix/routes'
 import { processRoutes } from '@/modules/processes/routes'
 import { reportRoutes } from '@/modules/reports/routes'
+import { requestRoutes } from '@/modules/requests/routes'
 
 declare module 'vue-router' {
   interface RouteMeta {
@@ -151,6 +152,7 @@ const routes: RouteRecordRaw[] = [
       ...cbaFixRoutes,
       ...processRoutes,
       ...reportRoutes,
+      ...requestRoutes,
       ...placeholderRoutes.filter((r) => r.path !== '/admin/configuration'),
     ],
   },

@@ -69,7 +69,7 @@ describe('submitDeletionRequest', () => {
     post.mockResolvedValueOnce({ data: { message: 'ok', id: 5 } })
     const payload = { record_id: 7, table_name: 'collaterals', comment: 'gone' }
     expect(await submitDeletionRequest(payload)).toEqual({ message: 'ok', id: 5 })
-    expect(post).toHaveBeenCalledWith('/deletion-requests', payload)
+    expect(post).toHaveBeenCalledWith('/deletion-requests', payload, { headers: { 'x-handled': '1' } })
   })
 })
 

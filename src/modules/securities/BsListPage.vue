@@ -4,16 +4,18 @@ import { RouterLink } from 'vue-router'
 import InfiniteScroll from '@/components/ui/InfiniteScroll.vue'
 import { useCollection } from '@/composables/useCollection'
 import { useAuthStore } from '@/stores/auth'
+import DeleteButton from '@/modules/requests/components/DeleteButton.vue'
+import { requestDeletion } from '@/modules/requests/deletionFlow'
 import PartyBlock from './components/PartyBlock.vue'
 import PartyModal from './components/PartyModal.vue'
 import type { PartyStart, StakeholderRow } from './types'
 
 /**
  * /bs-list: stakeholders of every borrower (bs/index.blade.php + BsIndex.vue). Stakeholders are added from a credit application or loan
- * page; this edits. Deleting goes through a deletion request (milestone 7) and is not offered yet.
+ * page; this edits. The trash icon files a deletion request and flags the row.
  */
 const auth = useAuthStore()
-const { items, search, loading, completed, error, loadMore, reload } =
+const { items, search, loading, completed, error, loadMore, reload, updateItem } =
   useCollection<StakeholderRow>('/stakeholders')
 onMounted(loadMore)
 
@@ -26,6 +28,9 @@ function edit(row: StakeholderRow) {
   dialog.start = { mode: 'edit', row }
   dialog.version += 1
   dialog.open = true
+}
+async function remove(s: StakeholderRow) {
+  if (await requestDeletion('stakeholder', s.id)) updateItem({ id: s.id, is_deleted: true })
 }
 const holding = (s: StakeholderRow) => `${s.category_name ?? ''} [${s.ShareholderPercentage ?? ''}%]`
 </script>
@@ -71,15 +76,22 @@ const holding = (s: StakeholderRow) => `${s.category_name ?? ''} [${s.Shareholde
                 aria-label="Deletion requested"
                 >⚑</span
               >
-              <button
-                v-else-if="auth.has('Update Stakeholder')"
-                type="button"
-                class="text-slate-500 hover:text-project"
-                :aria-label="`Edit stakeholder ${s.StakeholderClientNumber}`"
-                @click="edit(s)"
-              >
-                ✎
-              </button>
+              <template v-else>
+                <button
+                  v-if="auth.has('Update Stakeholder')"
+                  type="button"
+                  class="text-slate-500 hover:text-project"
+                  :aria-label="`Edit stakeholder ${s.StakeholderClientNumber}`"
+                  @click="edit(s)"
+                >
+                  ✎
+                </button>
+                <DeleteButton
+                  v-if="auth.has('Delete Stakeholder')"
+                  :label="`Request deletion of stakeholder ${s.StakeholderClientNumber}`"
+                  @click="remove(s)"
+                />
+              </template>
             </td>
           </tr>
         </tbody>

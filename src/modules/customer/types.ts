@@ -27,6 +27,8 @@ export interface CustomerRow {
   full_name: string
   customer_type: string
   classificationCode: string | null
+  /** A deletion request is waiting for this profile (the list adds it; absent on older responses). */
+  is_deleted?: boolean
 }
 
 /** A customer with its details (show, edit and the application screens). */
@@ -50,6 +52,10 @@ export interface Existence {
   client_number: string
   full_name: string
   classification: number
+  individual_name: string | null
+  non_individual_name: string | null
   has_individual: boolean
   has_non_individual: boolean
+  individual_id: number | null
+  non_individual_id: number | null
 }
