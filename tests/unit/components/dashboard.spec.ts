@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { mount, RouterLinkStub } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+vi.mock('@/modules/processes/api', () => ({ processApi: { activeCount: vi.fn(async () => 0) } }))
 import DashboardPage from '@/modules/dashboard/DashboardPage.vue'
 import { useAuthStore } from '@/stores/auth'
 

@@ -19,4 +19,6 @@ export interface Tile {
   /** Permission needed to see the tile (none = everyone). */
   permission?: string
   menu?: TileMenuItem[]
+  /** A count shown next to the title (the PROCESSES tile: processes pending or running); hidden at 0. */
+  badge?: number
 }
