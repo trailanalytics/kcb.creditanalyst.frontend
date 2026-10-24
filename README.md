@@ -11,8 +11,21 @@ Node 26 LTS (`.nvmrc`; 24+ works):
 npm ci
 npm run dev          # http://localhost:5173, proxies /api to http://localhost:8080 (VITE_API_PROXY to change)
 npm run lint && npm run typecheck && npm test && npm run build
-npm run test:e2e     # Playwright (npx playwright install chromium once)
+npm run test:e2e     # Playwright with the API mocked (npx playwright install chromium once)
+npm run test:uat     # the UAT against the real compose stack, see below
 ```
+
+## UAT (real stack, nothing mocked)
+
+`e2e/uat` holds the executable acceptance tests (`playwright.uat.config.ts`). They need the compose stack of the backend repository
+with the seed loaded (`scripts/uat/seed.sh`) and this app running with `/api` forwarded to it:
+
+```bash
+VITE_API_PROXY=http://localhost:8080 npm run dev -- --port 5173
+UAT_BASE_URL=http://localhost:5173 npm run test:uat
+```
+
+How to start everything, the users and data, and the paper script these tests belong to: `docs/uat/` in the backend repository.
 
 ## Docker
 

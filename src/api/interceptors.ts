@@ -7,7 +7,8 @@ import { useAuthStore } from '@/stores/auth'
 /**
  * Global answers to failed requests, as in resources/js/bootstrap.js:
  * 401 -> message and back to the login page, 419 -> offer a refresh, unexpected 500 -> show the error reference and offer
- * "Notify IT". Requests can opt out with the `x-handled` config flag (login form, notify form) by handling errors itself.
+ * "Notify IT". Requests can opt out with the `x-handled` config flag (login form, notify form) by handling errors itself;
+ * `x-handled: 4xx` leaves only client errors (validation messages) to the caller, so a 500 still shows its reference.
  */
 let shown = false
 
@@ -15,10 +16,10 @@ export function installErrorHandling(router: Router) {
   http.interceptors.response.use(
     (response) => response,
     async (error: unknown) => {
-      if (!axios.isAxiosError(error) || !error.response || error.config?.headers?.['x-handled']) {
-        return Promise.reject(error)
-      }
+      if (!axios.isAxiosError(error) || !error.response) return Promise.reject(error)
+      const handled = error.config?.headers?.['x-handled']
       const status = error.response.status
+      if (handled && !(handled === '4xx' && status >= 500)) return Promise.reject(error)
       const problem = problemOf(error)
       const url = error.config?.url ?? ''
 

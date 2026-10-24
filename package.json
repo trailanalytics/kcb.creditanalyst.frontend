@@ -15,7 +15,8 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:uat": "playwright test -c playwright.uat.config.ts"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",

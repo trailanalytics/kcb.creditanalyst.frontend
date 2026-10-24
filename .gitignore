@@ -12,3 +12,6 @@ test-results
 /e2e/*.js
 /vite.config.js
 /playwright.config.js
+
+# executable UAT
+/e2e/uat/.auth

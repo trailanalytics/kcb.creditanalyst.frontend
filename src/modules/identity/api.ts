@@ -6,9 +6,9 @@ export const usersApi = {
   branches: () => http.get<BranchOption[]>('/reference/branches').then((r) => r.data),
   get: (id: number | string) => http.get<UserDetail>(`/users/${id}`).then((r) => r.data),
   create: (form: UserForm) =>
-    http.post<UserDetail>('/users', body(form), { headers: { 'x-handled': '1' } }).then((r) => r.data),
+    http.post<UserDetail>('/users', body(form), { headers: { 'x-handled': '4xx' } }).then((r) => r.data),
   update: (id: number | string, form: UserForm) =>
-    http.put<UserDetail>(`/users/${id}`, body(form), { headers: { 'x-handled': '1' } }).then((r) => r.data),
+    http.put<UserDetail>(`/users/${id}`, body(form), { headers: { 'x-handled': '4xx' } }).then((r) => r.data),
 }
 
 /** An empty password is sent as null: on update it means "keep the current one". */
