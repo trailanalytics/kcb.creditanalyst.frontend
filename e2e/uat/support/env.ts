@@ -20,6 +20,9 @@ export const PERSONAS = {
   branch: 'uat.branch@kcb.test',
   noaccess: 'uat.noaccess@kcb.test',
   disabled: 'uat.disabled@kcb.test',
+  dba: 'uat.dba@kcb.test',
+  analyst: 'uat.analyst@kcb.test',
+  querymanager: 'uat.querymanager@kcb.test',
 } as const
 
 export type Persona = keyof typeof PERSONAS
