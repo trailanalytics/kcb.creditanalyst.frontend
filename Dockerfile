@@ -10,6 +10,8 @@ RUN npm run build
 
 # ---- runtime ---------------------------------------------------------------
 FROM nginx:alpine AS runtime
+# the base image lags behind fixes for its own libraries (Trivy flagged brotli-libs); take what Alpine has already fixed
+RUN apk upgrade --no-cache
 # nginx renders /etc/nginx/templates/*.template with the container's environment at start-up
 ENV API_UPSTREAM=http://app:8080
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
