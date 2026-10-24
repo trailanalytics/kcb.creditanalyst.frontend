@@ -201,7 +201,9 @@ test.describe('the CBA file, built in the background', () => {
     await page.goto('/reports/loans-without-cmc-bs-ccg')
     // one search for both fixture loans: the one with nothing linked is listed, the one with a collateral linked is not
     await page.getByLabel('Search contract code').fill('AA00UAT0')
-    await expect(page.getByTestId('loan-row').filter({ hasText: 'AA00UAT01' })).toHaveCount(1)
+    const listed = page.getByTestId('loan-row').filter({ hasText: 'AA00UAT01' })
+    await expect(listed).toHaveCount(1)
+    await expect(listed).toContainText('without_cmc')
     await expect(page.getByTestId('loan-row').filter({ hasText: 'AA00UAT02' })).toHaveCount(0)
   })
 
@@ -222,6 +224,17 @@ test.describe('the CBA file, built in the background', () => {
 
 test.describe('output files', () => {
   test('the files kept after a submission are listed with their time left and download', async ({ page }) => {
+    // the list is filled by the scheduled CBA run and by the feedback filter; the filter is the one to start by hand: a bureau
+    // feedback file goes in, a workbook comes out and is kept (15 days) under the rule name
+    const crb = await Api.as('crb')
+    const kept = await crb.upload(
+      '/api/v1/output-files/extract',
+      'output_file',
+      { name: 'feedback.csv', mimeType: 'text/csv', buffer: Buffer.from('"H"|"CB011"|"x"\n') },
+      { report_type: 'BC', rule_name: 'UATFEEDBACK' },
+    )
+    expect(kept.status).toBe(200)
+    await crb.dispose()
     await page.goto('/output-files')
     await expect(page.getByTestId('output-row').first()).toBeVisible()
     await expect(page.getByTestId('time-left').first()).toContainText(/left|day|hour/i)
