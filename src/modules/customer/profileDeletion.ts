@@ -2,7 +2,7 @@ import Swal from 'sweetalert2'
 import { messageOf } from '@/api/http'
 import { escapeHtml } from '@/modules/requests/deletionFlow'
 import { submitDeletionRequest } from '@/modules/requests/useDeletionRequest'
-import { hideLoader, showLoader, swalNotification, swalOk } from '@/utils/dialogs'
+import { hideLoader, popupDefaults, showLoader, swalNotification, swalOk } from '@/utils/dialogs'
 import { profilesApi } from './api'
 import type { Existence } from './types'
 
@@ -17,6 +17,7 @@ const cancelBtn = 'rounded px-4 py-2 text-sm font-medium text-white bg-slate-500
 const steps = Swal.mixin({
   customClass: { confirmButton: confirmBtn, cancelButton: cancelBtn },
   buttonsStyling: false,
+  ...popupDefaults,
 })
 
 type DeletionBody = Parameters<typeof submitDeletionRequest>[0]

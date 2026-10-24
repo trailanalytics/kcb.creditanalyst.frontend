@@ -14,4 +14,9 @@ export default tseslint.config(
       'vue/multi-word-component-names': 'off',
     },
   },
+  {
+    // the UAT helpers read JSON answers of the real API without a type for every endpoint
+    files: ['e2e/uat/**/*.ts'],
+    rules: { '@typescript-eslint/no-explicit-any': 'off' },
+  },
 )
