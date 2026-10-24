@@ -199,11 +199,10 @@ test.describe('the CBA file, built in the background', () => {
 
   test('the loans without collateral, guarantor or stakeholder are listed and searched', async ({ page }) => {
     await page.goto('/reports/loans-without-cmc-bs-ccg')
-    await page.getByLabel('Search contract code').fill('UATLN0005')
-    await expect(page.getByTestId('loan-row').filter({ hasText: 'UATLN0005' })).toHaveCount(1)
-    // a loan whose borrower has a collateral is not on the list
-    await page.getByLabel('Search contract code').fill('UATLN0001')
-    await expect(page.getByTestId('loan-row').filter({ hasText: 'UATLN0001' })).toHaveCount(0)
+    // one search for both fixture loans: the one with nothing linked is listed, the one with a collateral linked is not
+    await page.getByLabel('Search contract code').fill('AA00UAT0')
+    await expect(page.getByTestId('loan-row').filter({ hasText: 'AA00UAT01' })).toHaveCount(1)
+    await expect(page.getByTestId('loan-row').filter({ hasText: 'AA00UAT02' })).toHaveCount(0)
   })
 
   test('the submission analysis describes the files generated above and can be downloaded as a PDF', async ({
