@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 import { Api } from './support/api'
+import { nextFromPool } from './support/data'
 import { authFile } from './support/auth'
 import { buildXlsx, readXlsx } from './support/xlsx'
 import { confirmDialog, dialog, expectAppReadable, unique } from './support/ui'
@@ -302,17 +303,18 @@ test.describe('CBA fix tools: the modify accounts grid and the file fixes', () =
     expect(idle.status, `${idle.error_message ?? idle.progress_label}`).toBe('completed')
     expect(await total()).toBe(before)
 
-    // a record that is in the CBA output goes when its contract code is listed (the next CBA run builds the output again)
-    expect((await api.get('/api/v1/cba/accounts', { search: 'UATLN0008' })).body.total).toBe(1)
+    // a record that is in the CBA output goes when its contract code is listed; it takes a fixture loan of its own (UATDR pool)
+    const doomed = await nextFromPool(api, 'UATDR')
+    expect((await api.get('/api/v1/cba/accounts', { search: doomed.code })).body.total).toBe(1)
     const good = await api.upload('/api/v1/cba/fix/delete-records', 'file', {
       name: 'records.xlsx',
       mimeType: xlsxType,
-      buffer: buildXlsx([['contractCode'], ['UATLN0008']]),
+      buffer: buildXlsx([['contractCode'], [doomed.code]]),
     })
     expect(good.status).toBe(202)
     const done = await waitForProcess(api, (p) => p.id === good.body.process_id)
     expect(done.status, `${done.error_message ?? done.progress_label}`).toBe('completed')
-    expect((await api.get('/api/v1/cba/accounts', { search: 'UATLN0008' })).body.total).toBe(0)
+    expect((await api.get('/api/v1/cba/accounts', { search: doomed.code })).body.total).toBe(0)
     expect(await total()).toBe(before - 1)
     await api.dispose()
   })

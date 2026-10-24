@@ -99,6 +99,12 @@ const POOLS: Record<string, PoolSpec> = {
     key: 'contractCode',
     name: (n) => `UATFC${String(n).padStart(4, '0')}`,
   },
+  UATDR: {
+    size: 20,
+    path: '/api/v1/loans',
+    key: 'contractCode',
+    name: (n) => `UATDR${String(n).padStart(4, '0')}`,
+  },
   UATFP: {
     size: 30,
     path: '/api/v1/loans',

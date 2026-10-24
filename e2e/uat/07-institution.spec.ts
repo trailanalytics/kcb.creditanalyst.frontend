@@ -4,7 +4,17 @@ import { authFile } from './support/auth'
 import { CUSTOMER } from './support/env'
 import { nextFromPool, uniqueName } from './support/data'
 import { buildXlsx } from './support/xlsx'
-import { confirmDialog, dialog, expectAppReadable, modal, money, toasts, today, unique } from './support/ui'
+import {
+  confirmDialog,
+  dialog,
+  expectAppReadable,
+  modal,
+  money,
+  toasts,
+  today,
+  unique,
+  uniqueAmount,
+} from './support/ui'
 
 test.use({ storageState: authFile('crb') })
 
@@ -191,6 +201,9 @@ test.describe('bounced cheques: upload and list', () => {
 
 test.describe('fraud (financial malpractice)', () => {
   test('a fraud record is registered for an existing customer and then changed', async ({ page }) => {
+    // a customer may have several fraud records: this run's is found by its loss amount
+    const loss = uniqueAmount()
+    const edited = `Edited incident details ${unique()}`
     await page.goto('/home')
     await page.getByRole('link', { name: '+ New Financial Malpractice' }).click()
     await expect(page).toHaveURL(/\/fraud/)
@@ -207,7 +220,7 @@ test.describe('fraud (financial malpractice)', () => {
     await form.locator('select[name="fraudCategory"]').selectOption('2')
     await pickDate(page, 'incident_day', 'incident_month', 'incident_year', { d: '5', m: '8', y: '2026' })
     await money(form, 'saving_amount').fill('100000')
-    await money(form, 'loss_amount').fill('2500000')
+    await money(form, 'loss_amount').fill(loss)
     await form.locator('select[name="currency"]').selectOption('UGX')
     await form.locator('textarea[name="incidentDetails"]').fill('Forged signature on a withdrawal slip')
     await form.locator('select[name="forensicInformation"]').selectOption('A')
@@ -215,23 +228,21 @@ test.describe('fraud (financial malpractice)', () => {
     await expect(dialog(page)).toContainText('FRA Saved Successfully')
     await confirmDialog(page, 'OK')
     await expectAppReadable(page)
-    const row = page.getByRole('row', { name: /Mukasa Francis/ })
+    const row = page
+      .getByRole('row', { name: /Mukasa Francis/ })
+      .filter({ hasText: Number(loss).toLocaleString('en-US') })
     await expect(row).toContainText('Identity theft')
-    await expect(row).toContainText('2,500,000')
 
-    await page
-      .getByRole('button', { name: `Edit ${CUSTOMER.spare[0]}` })
-      .first()
-      .click()
-    await modal(page).locator('textarea[name="incidentDetails"]').fill('Edited incident details')
+    await row.getByRole('button', { name: `Edit ${CUSTOMER.spare[0]}` }).click()
+    await modal(page).locator('textarea[name="incidentDetails"]').fill(edited)
     await modal(page).getByRole('button', { name: 'Save' }).click()
     await expect(dialog(page)).toContainText('FRA Saved Successfully')
     await confirmDialog(page, 'OK')
     const api = await Api.as('crb')
     const saved = (await api.get('/api/v1/fraud')).body.data.find(
-      (f: any) => f.clientNumber === CUSTOMER.spare[0],
+      (f: any) => f.clientNumber === CUSTOMER.spare[0] && f.IncidentDetails === edited,
     )
-    expect(saved.IncidentDetails).toBe('Edited incident details')
+    expect(saved, 'the edited record is in the list').toBeTruthy()
     expect(saved.IncidentDate).toBe('20260805')
     await api.dispose()
   })
