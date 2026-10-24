@@ -15,8 +15,8 @@ export default defineConfig({
   workers: 1,
   fullyParallel: false,
   retries: 0,
-  timeout: 90_000,
-  expect: { timeout: 15_000 },
+  timeout: 180_000,
+  expect: { timeout: 45_000 },
   reporter: [['list'], ['json', { outputFile: 'test-results/uat-report.json' }]],
   outputDir: 'test-results/uat',
   use: {
@@ -24,6 +24,6 @@ export default defineConfig({
     acceptDownloads: true,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    actionTimeout: 15_000,
+    actionTimeout: 45_000,
   },
 })

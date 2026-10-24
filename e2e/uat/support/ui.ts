@@ -84,6 +84,9 @@ export async function fillProfile(page: Page, opts: ProfileFill = {}) {
     const el = field(name)
     if (await el.count()) await el.selectOption(label as any)
   }
+  // the form draws itself once its lists are loaded; fields that are not there yet would be skipped silently
+  await root.locator('[name="PCI_CountryCode"]').first().waitFor()
+  await expect(root.locator('[name="PCI_Region"] option').nth(1)).toBeAttached()
   const branch = root.locator('select[name="branchCode"]').first()
   if ((await branch.count()) && !(await branch.inputValue())) await branch.selectOption('001')
   await set('PCI_CountryCode', 'UG')
@@ -135,4 +138,25 @@ export async function fillProfile(page: Page, opts: ProfileFill = {}) {
     await set('EI_IncomeBand', '2')
     await set('EI_SalaryFrequency', 'M')
   }
+}
+
+/** The open reka dialog (a modal). */
+export function modal(page: Page): Locator {
+  return page.getByRole('dialog')
+}
+
+/** Choose an item of a dropdown button such as "Add Guarantors" (the trigger name includes the arrow). */
+export async function chooseFromMenu(page: Page, trigger: string | RegExp, item: string | RegExp) {
+  await page.getByRole('button', { name: trigger }).click()
+  await page.getByRole('menuitem', { name: item, exact: typeof item === 'string' }).click()
+}
+
+/** The visible text box of a MoneyInput found by the name of its hidden twin, inside `root`. */
+export function money(root: Locator, name: string): Locator {
+  return root.locator(`input[name="${name}"] >> xpath=preceding-sibling::input`)
+}
+
+/** The page is exposed to assistive technology (no stale aria-hidden left on #app by a closed dialog). */
+export async function expectAppReadable(page: Page) {
+  await expect(page.locator('#app')).not.toHaveAttribute('aria-hidden', 'true')
 }

@@ -57,9 +57,9 @@ async function download() {
         Status
         <select v-model="form.status" class="form-input mt-1">
           <option value="">All</option>
-          <option value="2">Pending</option>
-          <option value="0">Approved</option>
-          <option value="rejected">Rejected</option>
+          <option value="Pending">Pending</option>
+          <option value="Approved">Approved</option>
+          <option value="Rejected">Rejected</option>
         </select>
       </label>
       <div class="grid gap-4 sm:grid-cols-2">

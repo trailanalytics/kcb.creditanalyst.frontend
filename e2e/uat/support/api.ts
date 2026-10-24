@@ -107,6 +107,15 @@ export class Api {
     return this.send('POST', path, { multipart: { [field]: file, ...extra } })
   }
 
+  /** A GET whose answer is a file: the bytes with the status and headers. */
+  async raw(
+    path: string,
+    params?: Record<string, string | number>,
+  ): Promise<{ status: number; headers: Record<string, string>; buffer: Buffer }> {
+    const res = await this.ctx.get(path, { params })
+    return { status: res.status(), headers: res.headers(), buffer: Buffer.from(await res.body()) }
+  }
+
   /** A call that must succeed: throws with the server's answer otherwise, so a broken fixture is obvious. */
   async must(reply: Promise<Reply>, what: string): Promise<Reply> {
     const r = await reply

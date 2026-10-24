@@ -2,7 +2,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { Api } from './support/api'
 import { authFile } from './support/auth'
 import { CUSTOMER } from './support/env'
-import { application, createApplication, nextPoolLoan, profile } from './support/data'
+import { application, createApplication, nextPoolLoan } from './support/data'
 import {
   confirmDialog,
   dialog,
