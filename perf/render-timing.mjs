@@ -20,12 +20,12 @@ const pages = [
   { name: 'dashboard', path: '/home', ready: 'main a, main button' },
   { name: 'profiles list', path: '/profiles', ready: 'tbody tr' },
   { name: 'profile details', path: `/borrowers/${CUSTOMER_ID}`, ready: 'main h1, main h2' },
-  { name: 'applications list', path: '/applications', ready: 'tbody tr' },
+  { name: 'applications list', path: '/applications', ready: 'a[href^="/borrowers/"]' },
   { name: 'application details', path: `/applications/show/${APP_ID}`, ready: 'main h1, main h2' },
-  { name: 'loans list', path: '/loans', ready: 'tbody tr' },
+  { name: 'loans list', path: '/loans', ready: 'a[href^="/borrowers/"]' },
   { name: 'loan details', path: `/loans/show/${LOAN_ID}`, ready: 'main h1, main h2' },
-  { name: 'collaterals list', path: '/collaterals', ready: 'tbody tr' },
-  { name: 'processes', path: '/processes', ready: 'main h1, main h2' },
+  { name: 'collaterals list (CMC)', path: '/cmc-list', ready: 'tbody tr' },
+  { name: 'processes', path: '/background-processes', ready: 'tbody tr, main p' },
 ]
 
 async function signIn(page) {
@@ -39,11 +39,17 @@ async function signIn(page) {
 async function time(page, p) {
   const t0 = Date.now()
   await page.goto(BASE + p.path, { waitUntil: 'commit' })
-  await page.locator(p.ready).first().waitFor({ state: 'visible', timeout: 120000 })
+  try {
+    await page.locator(p.ready).first().waitFor({ state: 'visible', timeout: 30000 })
+  } catch {
+    return 30000 // not visible within 30 s: counted as 30 s and reported as a fail
+  }
   return Date.now() - t0
 }
 
 const pct = (a, q) => a.slice().sort((x, y) => x - y)[Math.min(a.length - 1, Math.ceil(q * a.length) - 1)]
+const only = process.env.PERF_PAGES ? process.env.PERF_PAGES.split(',') : null
+if (only) pages.splice(0, pages.length, ...pages.filter((p) => only.includes(p.name)))
 const browser = await chromium.launch()
 const rows = []
 for (const p of pages) {
