@@ -79,7 +79,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Scan the source tree
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scanners: vuln,secret,misconfig
@@ -89,7 +89,7 @@ jobs:
       - name: Build the image
         run: docker build -t kcb/creditanalyst-frontend:scan .
       - name: Scan the image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: kcb/creditanalyst-frontend:scan
           severity: HIGH,CRITICAL
