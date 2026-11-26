@@ -35,6 +35,8 @@ export const C = {
   amber: 'B06000',
 }
 const FONT = 'Arial'
+/** Every run names its font: some renderers (Quick Look, older Word viewers) ignore the document default. */
+const TR = (o) => new TextRun(typeof o === 'string' ? { text: o, font: FONT } : { font: FONT, ...o })
 export const PAGE = { width: 11906, height: 16838, margin: 1134 } // A4 in twips, 2 cm margins
 export const CONTENT_PX = 642 // usable width in docx pixels (96 dpi) for 17 cm
 
@@ -51,8 +53,8 @@ export const styles = {
 }
 
 export const p = (text, o = {}) => new Paragraph({ children: runs(text, o), spacing: o.spacing, alignment: o.align, keepNext: o.keepNext })
-export const h1 = (text) => new Paragraph({ text, style: 'Heading1' })
-export const h2 = (text) => new Paragraph({ text, style: 'Heading2' })
+export const h1 = (text) => new Paragraph({ style: 'Heading1', children: [TR({ text, font: FONT })] })
+export const h2 = (text) => new Paragraph({ style: 'Heading2', children: [TR({ text, font: FONT })] })
 export const pageBreak = () => new Paragraph({ children: [new PageBreak()] })
 
 /** Text with **bold** spans. */
@@ -61,7 +63,7 @@ export function runs(text, o = {}) {
   String(text ?? '').split(/(\*\*[^*]+\*\*)/).forEach((part) => {
     if (!part) return
     const bold = part.startsWith('**') && part.endsWith('**')
-    out.push(new TextRun({ text: bold ? part.slice(2, -2) : part, bold: bold || o.bold, color: o.color, size: o.size, italics: o.italics, font: FONT }))
+    out.push(TR({ text: bold ? part.slice(2, -2) : part, bold: bold || o.bold, color: o.color, size: o.size, italics: o.italics, font: FONT }))
   })
   return out
 }
@@ -69,14 +71,14 @@ export function runs(text, o = {}) {
 export function cover({ kicker, title, subtitle, purpose, meta }) {
   const rows = meta.map(([k, v]) =>
     new TableRow({ children: [
-      cell([new Paragraph({ children: [new TextRun({ text: k, bold: true, size: 19 })], spacing: { after: 20 } })], { width: 2300, borders: false }),
-      cell([new Paragraph({ children: [new TextRun({ text: v, size: 19 })], spacing: { after: 20 } })], { width: 7300, borders: false }),
+      cell([new Paragraph({ children: [TR({ text: k, bold: true, size: 19 })], spacing: { after: 20 } })], { width: 2300, borders: false }),
+      cell([new Paragraph({ children: [TR({ text: v, size: 19 })], spacing: { after: 20 } })], { width: 7300, borders: false }),
     ] }))
   return [
-    new Paragraph({ spacing: { before: 600, after: 120 }, children: [new TextRun({ text: kicker, bold: true, color: C.blue, size: 22 })] }),
-    new Paragraph({ spacing: { after: 0 }, children: [new TextRun({ text: title, bold: true, size: 64 })] }),
-    new Paragraph({ spacing: { after: 480 }, children: [new TextRun({ text: subtitle, size: 40, color: C.grey })] }),
-    new Paragraph({ spacing: { after: 480 }, children: [new TextRun({ text: purpose, size: 24, color: C.grey })] }),
+    new Paragraph({ spacing: { before: 600, after: 120 }, children: [TR({ text: kicker, bold: true, color: C.blue, size: 22 })] }),
+    new Paragraph({ spacing: { after: 0 }, children: [TR({ text: title, bold: true, size: 64 })] }),
+    new Paragraph({ spacing: { after: 480 }, children: [TR({ text: subtitle, size: 40, color: C.grey })] }),
+    new Paragraph({ spacing: { after: 480 }, children: [TR({ text: purpose, size: 24, color: C.grey })] }),
     new Table({ width: { size: 9600, type: WidthType.DXA }, columnWidths: [2300, 7300], borders: none(), rows }),
     pageBreak(),
   ]
@@ -123,7 +125,7 @@ export function tip(text, label = 'Tip') {
     width: { size: 9600, type: WidthType.DXA },
     columnWidths: [9600],
     rows: [new TableRow({ children: [new TableCell({
-      children: [new Paragraph({ spacing: { after: 0, line: 264 }, children: [new TextRun({ text: `${label}  `, bold: true, color: C.orange }), ...runs(text)] })],
+      children: [new Paragraph({ spacing: { after: 0, line: 264 }, children: [TR({ text: `${label}  `, bold: true, color: C.orange }), ...runs(text)] })],
       shading: { type: ShadingType.CLEAR, color: 'auto', fill: C.orangeBg },
       borders: { left: { style: BorderStyle.SINGLE, size: 36, color: C.orange }, top: nb(), bottom: nb(), right: nb() },
       margins: { top: 100, bottom: 100, left: 140, right: 140 },
@@ -147,7 +149,7 @@ export function figure(file, number, caption, marks = [], steps = [], maxHeight 
     new Paragraph({ alignment: AlignmentType.CENTER, keepNext: true, spacing: { before: 120, after: 0 },
       children: [new ImageRun({ type: 'png', data, transformation: { width: w, height: h },
         outline: { type: 'solidFill', solidFillType: 'rgb', value: 'D0D5DD', width: 6350 } })] }),
-    new Paragraph({ text: `Figure ${number}. ${caption}`, style: 'Caption', keepNext: marks.length + steps.length > 0 }),
+    new Paragraph({ style: 'Caption', keepNext: marks.length + steps.length > 0, children: [TR({ text: `Figure ${number}. ${caption}`, italics: true, size: 19, color: '444444' })] }),
   ]
   const all = [...marks, ...steps]
   all.forEach((t, i) => out.push(numbered(i + 1, t, i < all.length - 1)))
@@ -160,7 +162,7 @@ export function numbered(n, text, keepNext = false) {
     spacing: { after: 60 },
     tabStops: [{ type: TabStopType.LEFT, position: 420 }],
     indent: { left: 420, hanging: 420 },
-    children: [new TextRun({ text: String(n), bold: true, color: C.orange }), new TextRun({ text: '\t' }), ...runs(text)],
+    children: [TR({ text: String(n), bold: true, color: C.orange }), TR({ text: '\t' }), ...runs(text)],
   })
 }
 
@@ -170,7 +172,7 @@ export function steps(list) {
     spacing: { after: 70 },
     tabStops: [{ type: TabStopType.LEFT, position: 420 }],
     indent: { left: 420, hanging: 420 },
-    children: [new TextRun({ text: `${i + 1}.`, bold: true }), new TextRun({ text: '\t' }), ...runs(t)],
+    children: [TR({ text: `${i + 1}.`, bold: true }), TR({ text: '\t' }), ...runs(t)],
   }))
 }
 
@@ -181,12 +183,12 @@ export function bullets(list) {
 export function headerFooter(headerText, footerText) {
   return {
     headers: {
-      default: new Header({ children: [new Paragraph({ children: [new TextRun({ text: headerText, size: 17, color: C.grey })] })] }),
+      default: new Header({ children: [new Paragraph({ children: [TR({ text: headerText, size: 17, color: C.grey })] })] }),
       first: new Header({ children: [new Paragraph('')] }),
     },
     footers: {
       default: new Footer({ children: [new Paragraph({ alignment: AlignmentType.RIGHT,
-        children: [new TextRun({ text: `${footerText} · Page `, size: 17, color: C.grey }), new TextRun({ children: [PageNumber.CURRENT], size: 17, color: C.grey })] })] }),
+        children: [TR({ text: `${footerText} · Page `, size: 17, color: C.grey }), TR({ children: [PageNumber.CURRENT], size: 17, color: C.grey })] })] }),
       first: new Footer({ children: [new Paragraph('')] }),
     },
   }
@@ -202,5 +204,5 @@ export function docControl(rows) {
 }
 
 export function contents(titles) {
-  return [h2('Contents'), ...titles.map((t, i) => new Paragraph({ spacing: { after: 50 }, children: [new TextRun({ text: `${i + 1}.  ${t}` })] }))]
+  return [h2('Contents'), ...titles.map((t, i) => new Paragraph({ spacing: { after: 50 }, children: [TR({ text: `${i + 1}.  ${t}` })] }))]
 }
