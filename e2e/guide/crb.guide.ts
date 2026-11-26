@@ -596,12 +596,12 @@ test.describe('CRB Officer Guide', () => {
     await page.getByRole('menuitem', { name: 'Update CBA Accounts' }).click()
     await expect(page).toHaveURL(/\/cba\/output/)
     await page.getByPlaceholder('Enter Account Reference or Client Number').fill('UATLN0001')
-    await page.getByRole('button', { name: 'Load Account' }).click()
+    await page.getByRole('button', { name: 'Load Account', exact: true }).first().click()
     await expect(page.getByTestId('page-status')).toContainText('account')
     await expect(page.getByTestId('validations')).not.toContainText('loading...')
     await figure(page, ROLE, '14-update-cba-accounts', 'Update CBA accounts', [
       { target: page.getByPlaceholder('Enter Account Reference or Client Number'), tip: 'Type an account reference or client number', side: 'above' },
-      { target: page.getByRole('button', { name: 'Load Account' }), tip: 'Click Load Account, then change the cells', side: 'above' },
+      { target: page.getByRole('button', { name: 'Load Account', exact: true }).first(), tip: 'Click Load Account, then change the cells', side: 'above' },
       { target: page.getByTestId('save'), tip: 'Click Save Changes', side: 'below' },
       { target: page.getByTestId('validations'), tip: 'The CBA rules: View lists the accounts that break one', side: 'left' },
     ])

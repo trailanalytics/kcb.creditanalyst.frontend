@@ -74,7 +74,7 @@ test.describe('CBS Query Validator Guide', () => {
     await expect(page.getByTestId('live-passed')).toHaveText('Does not pass')
     const apply = page.getByTestId('live-check').getByTestId('apply').first()
     await expect(apply).toBeEnabled()
-    const finding = page.getByTestId('live-check').locator('tr').filter({ has: apply })
+    const finding = page.getByTestId('live-check').locator('tr', { has: page.getByTestId('apply') }).first()
     await figure(page, ROLE, '02-finding', 'The live check finds a wrong alias', [
       { target: page.getByTestId('live-passed'), tip: 'The check runs as you type', side: 'below' },
       { target: finding, tip: 'What is wrong and what the alias should be', side: 'below' },

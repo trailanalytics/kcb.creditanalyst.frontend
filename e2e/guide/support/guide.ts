@@ -59,9 +59,18 @@ export async function figure(page: Page, role: string, id: string, caption: stri
     layer.id = '__guide_layer'
     layer.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:2147483647;font-family:Arial,Helvetica,sans-serif'
     const W = window.innerWidth
+    const H = window.innerHeight
+    const pad = 4
+    type R = { l: number; t: number; r: number; b: number }
+    const hit = (a: R, b: R) => a.l < b.r && b.l < a.r && a.t < b.b && b.t < a.b
+    // every outlined element is an obstacle for every tip, and so is each tip already placed
+    const taken: R[] = items.map((b) => ({ l: b.x - pad - 12, t: b.y - pad - 12, r: b.x + b.width + pad, b: b.y + b.height + pad }))
+    // toasts left over from an earlier step are hidden unless the figure is about one (a mark inside it)
+    const toasts = Array.from(document.querySelectorAll<HTMLElement>('.iziToast-wrapper, .iziToast-capsule'))
+    const marked = (el: HTMLElement) => items.some((b) => { const r = el.getBoundingClientRect(); return b.x >= r.left && b.x <= r.right && b.y >= r.top && b.y <= r.bottom })
+    toasts.forEach((el) => { if (!marked(el)) { el.dataset.guideHidden = el.style.visibility; el.style.visibility = 'hidden' } })
     items.forEach((b, i) => {
       const n = i + 1
-      const pad = 4
       const box = document.createElement('div')
       box.style.cssText = `position:fixed;left:${b.x - pad}px;top:${b.y - pad}px;width:${b.width + 2 * pad}px;height:${b.height + 2 * pad}px;border:2.5px solid #E8731C;border-radius:6px;box-shadow:0 0 0 2px rgba(255,255,255,.7)`
       layer.appendChild(box)
@@ -69,23 +78,41 @@ export async function figure(page: Page, role: string, id: string, caption: stri
       badge.textContent = String(n)
       badge.style.cssText = `position:fixed;left:${Math.max(2, b.x - pad - 11)}px;top:${Math.max(2, b.y - pad - 11)}px;width:22px;height:22px;border-radius:11px;background:#E8731C;color:#fff;font-weight:700;font-size:13px;line-height:22px;text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.35)`
       layer.appendChild(badge)
+    })
+    items.forEach((b, i) => {
       if (b.quiet) return
+      const n = i + 1
       const tip = document.createElement('div')
       tip.textContent = `${n}. ${b.tip}`
       tip.style.cssText = 'position:fixed;max-width:230px;padding:5px 8px;background:#fff;border:1.5px solid #E8731C;border-radius:5px;color:#222;font-size:12px;line-height:1.3;box-shadow:0 1px 3px rgba(0,0,0,.25)'
       layer.appendChild(tip)
       const tw = Math.min(230, tip.offsetWidth)
       const th = tip.offsetHeight
-      let side = b.side
-      if (!side) side = b.x + b.width + pad + 12 + tw < W ? 'right' : b.x - pad - 12 - tw > 0 ? 'left' : 'below'
-      let left = 0
-      let top = 0
-      if (side === 'right') { left = b.x + b.width + pad + 10; top = b.y + b.height / 2 - th / 2 }
-      if (side === 'left') { left = b.x - pad - 10 - tw; top = b.y + b.height / 2 - th / 2 }
-      if (side === 'below') { left = b.x; top = b.y + b.height + pad + 8 }
-      if (side === 'above') { left = b.x; top = b.y - pad - 8 - th }
-      tip.style.left = `${Math.max(4, Math.min(left, W - tw - 4))}px`
-      tip.style.top = `${Math.max(4, top)}px`
+      const at = (side: string, shift = 0): R => {
+        let l = 0
+        let t = 0
+        if (side === 'right') { l = b.x + b.width + pad + 10; t = b.y + b.height / 2 - th / 2 + shift }
+        if (side === 'left') { l = b.x - pad - 10 - tw; t = b.y + b.height / 2 - th / 2 + shift }
+        if (side === 'below') { l = b.x + shift; t = b.y + b.height + pad + 8 }
+        if (side === 'above') { l = b.x + shift; t = b.y - pad - 8 - th }
+        l = Math.max(4, Math.min(l, W - tw - 4))
+        t = Math.max(4, Math.min(t, H - th - 4))
+        return { l, t, r: l + tw, b: t + th }
+      }
+      const sides = [b.side, 'right', 'left', 'below', 'above'].filter((x, k, a) => x && a.indexOf(x) === k) as string[]
+      const shifts = [0, 40, -40, 80, -80, 120, -120, 180, -180]
+      let best: R | null = null
+      for (const shift of shifts) {
+        for (const side of sides) {
+          const r = at(side, shift)
+          if (!taken.some((o) => hit(r, o))) { best = r; break }
+        }
+        if (best) break
+      }
+      best ??= at(sides[0])
+      tip.style.left = `${best.l}px`
+      tip.style.top = `${best.t}px`
+      taken.push({ l: best.l - 4, t: best.t - 4, r: best.r + 4, b: best.b + 4 })
     })
     document.body.appendChild(layer)
   }, boxes)
@@ -103,7 +130,13 @@ export async function figure(page: Page, role: string, id: string, caption: stri
   }
   const file = path.join(dir, `${id}.png`)
   await page.screenshot({ path: file, clip, fullPage: opts.fullPage, animations: 'disabled', mask: opts.mask, maskColor: '#C9CED6' })
-  await page.evaluate(() => document.getElementById('__guide_layer')?.remove())
+  await page.evaluate(() => {
+    document.getElementById('__guide_layer')?.remove()
+    document.querySelectorAll<HTMLElement>('[data-guide-hidden]').forEach((el) => {
+      el.style.visibility = el.dataset.guideHidden ?? ''
+      delete el.dataset.guideHidden
+    })
+  })
   fs.writeFileSync(
     path.join(dir, `${id}.json`),
     JSON.stringify({ role, id, caption, image: `${id}.png`, marks: marks.map((m) => m.tip), steps: opts.steps ?? [], spec: test.info().titlePath.join(' › ') }, null, 1),

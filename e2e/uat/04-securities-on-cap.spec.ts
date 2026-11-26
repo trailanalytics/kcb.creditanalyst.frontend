@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { Api } from './support/api'
 import { authFile } from './support/auth'
-import { CUSTOMER } from './support/env'
+import { CUSTOMER, BRANCH } from './support/env'
 import {
   createApplication,
   createCollateral,
@@ -220,7 +220,7 @@ async function fillGuarantor(
   opts: { company?: boolean; surname?: string; forename?: string; value?: string },
 ) {
   const form = modal(page)
-  await form.locator('select[name="branchCode"]').selectOption('001')
+  await form.locator('select[name="branchCode"]').selectOption(BRANCH)
   await form.locator('input[name="ValueOfGuarantorsCollateral"]').fill(opts.value ?? '7500000')
   await form.locator('select[name="GuaranteeType"]').selectOption('1')
   await form.locator('select[name="GuarantorType"]').selectOption('0')
@@ -242,7 +242,7 @@ async function fillStakeholder(
   opts: { company?: boolean; surname?: string; percentage?: string },
 ) {
   const form = modal(page)
-  await form.locator('select[name="branchCode"]').selectOption('001')
+  await form.locator('select[name="branchCode"]').selectOption(BRANCH)
   await form.locator('input[name="ShareholderPercentage"]').fill(opts.percentage ?? '25')
   await form.locator('select[name="StakeholderCategory"]').selectOption('1')
   const { fcs, nin } = ids()
@@ -338,7 +338,7 @@ test.describe('UAT-10 to UAT-13: guarantors on an application', () => {
     const form = modal(page)
     await expect(form.getByLabel('Client number')).toHaveValue(CUSTOMER.guarantor)
     await expect(form.getByLabel('Classification')).toBeDisabled()
-    await form.locator('select[name="branchCode"]').selectOption('001')
+    await form.locator('select[name="branchCode"]').selectOption(BRANCH)
     await form.locator('input[name="ValueOfGuarantorsCollateral"]').fill('3000000')
     await form.locator('select[name="GuaranteeType"]').selectOption('0')
     await form.locator('select[name="GuarantorType"]').selectOption('0')
@@ -355,7 +355,7 @@ test.describe('UAT-10 to UAT-13: guarantors on an application', () => {
         (await (await api.get('/api/v1/profiles', { search: CUSTOMER.guarantor })).body.data[0]).id,
       ),
       classificationCode: '0',
-      branchCode: '001',
+      branchCode: BRANCH,
       ValueOfGuarantorsCollateral: '1000',
       GuaranteeType: '0',
       GuarantorType: '0',
@@ -449,7 +449,7 @@ test.describe('UAT-14 to UAT-16: stakeholders on an application', () => {
       .click()
     const form = modal(page)
     await expect(form.getByLabel('Client number')).toHaveValue(CUSTOMER.jointPartner)
-    await form.locator('select[name="branchCode"]').selectOption('001')
+    await form.locator('select[name="branchCode"]').selectOption(BRANCH)
     await form.locator('input[name="ShareholderPercentage"]').fill('12')
     await form.locator('select[name="StakeholderCategory"]').selectOption('2')
     await form.getByRole('button', { name: 'Save' }).click()

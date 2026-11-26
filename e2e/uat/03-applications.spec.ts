@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { Api } from './support/api'
 import { authFile } from './support/auth'
-import { CUSTOMER } from './support/env'
+import { CUSTOMER, BRANCH } from './support/env'
 import { application, createApplication, nextPoolLoan } from './support/data'
 import {
   confirmDialog,
@@ -40,7 +40,7 @@ async function fillLoan(
   await page.locator('#cap-term').fill(loan.term ?? '12')
   await page.getByLabel('Term period').selectOption(loan.period ?? 'Month')
   await page.locator('#cap-purpose').selectOption(loan.purpose ?? '1')
-  await page.locator('#cap-branch').selectOption('001')
+  await page.locator('#cap-branch').selectOption(BRANCH)
 }
 
 test.describe('UAT-06: create a loan application', () => {

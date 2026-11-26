@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test'
-import { PERSONAS, passwordOf, type Persona } from './env'
+import { PERSONAS, passwordOf, type Persona, BRANCH } from './env'
 import { shot } from './evidence'
 
 /** Sign in on the login screen the way a user does. */
@@ -97,7 +97,7 @@ export async function fillProfile(page: Page, opts: ProfileFill = {}) {
   await root.locator('[name="PCI_CountryCode"]').first().waitFor()
   await expect(root.locator('[name="PCI_Region"] option').nth(1)).toBeAttached()
   const branch = root.locator('select[name="branchCode"]').first()
-  if ((await branch.count()) && !(await branch.inputValue())) await branch.selectOption('001')
+  if ((await branch.count()) && !(await branch.inputValue())) await branch.selectOption(BRANCH)
   await set('PCI_CountryCode', 'UG')
   await set('PCI_Region', 'C')
   await set('PCI_District', 'Kampala')

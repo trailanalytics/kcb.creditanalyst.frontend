@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { Api } from './support/api'
 import { authFile } from './support/auth'
-import { CUSTOMER } from './support/env'
+import { CUSTOMER, BRANCH } from './support/env'
 import { nextFromPool, uniqueName } from './support/data'
 import { buildXlsx } from './support/xlsx'
 import {
@@ -291,7 +291,7 @@ test.describe('participating institution, its stakeholders and the branches', ()
     await expect(page).toHaveURL(/\/proflie\/new\/pis\?profile=/)
     await page.locator('input[name="ShareholderPercentage"]').fill('7')
     await page.locator('select[name="StakeholderCategory"]').selectOption('2')
-    await page.locator('select[name="branchCode"]').selectOption('001')
+    await page.locator('select[name="branchCode"]').selectOption(BRANCH)
     await page.getByRole('button', { name: 'Save' }).click()
     await expect(dialog(page)).toContainText('PIS Saved Successfully')
     await confirmDialog(page, 'OK')
