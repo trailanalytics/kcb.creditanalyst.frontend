@@ -1,6 +1,14 @@
+# The scheme the browser used. Behind a TLS proxy (the host nginx of a VPS, an IIS front end, a Kubernetes ingress) this nginx
+# itself sees plain http, so an X-Forwarded-Proto of https from that proxy is taken. A client can only use it to claim https,
+# which makes the backend stricter (Secure cookies, HSTS), never looser.
+map $http_x_forwarded_proto $client_scheme {
+    default $scheme;
+    https   https;
+}
+
 # Strict-Transport-Security only on requests that arrived over TLS (a browser ignores it on plain http, and a development
 # stack on http://localhost should not advertise it). One year, subdomains included.
-map $scheme $hsts_header {
+map $client_scheme $hsts_header {
     default "";
     https   "max-age=31536000; includeSubDomains";
 }
