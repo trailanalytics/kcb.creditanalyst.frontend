@@ -5,7 +5,7 @@ import { authFile } from './support/auth'
 import { CUSTOMER, BRANCH } from './support/env'
 import { application, createApplication, nextFromPool, nextPoolLoan } from './support/data'
 import { buildXlsx, readXlsx } from './support/xlsx'
-import { confirmDialog, dialog, expectAppReadable, uniqueAmount } from './support/ui'
+import { confirmDialog, dialog, expectAppReadable, uniqueAmount, cardMenu } from './support/ui'
 
 const xlsxType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
@@ -101,7 +101,7 @@ test.describe('UAT-24: export loan applications', () => {
       'reject',
     )
     await page.goto('/home')
-    await page.getByRole('button', { name: 'More' }).first().click()
+    await cardMenu(page, 'Manage Credit Applications').click()
     await page.getByRole('menuitem', { name: 'Applications Report' }).click()
     await expect(page).toHaveURL(/\/applications\/report/)
     await page.getByLabel('Status').selectOption({ label: 'Pending' })

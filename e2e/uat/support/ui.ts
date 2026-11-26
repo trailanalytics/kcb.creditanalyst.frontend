@@ -170,3 +170,11 @@ export function money(root: Locator, name: string): Locator {
 export async function expectAppReadable(page: Page) {
   await expect(page.locator('#app')).not.toHaveAttribute('aria-hidden', 'true')
 }
+
+/**
+ * The "More" arrow of a dashboard card, found by the card's footer link ("Manage Credit Applications", "Review Credit Accounts").
+ * Which cards have a menu depends on the user's permissions (UD-08), so a position such as "the second arrow" is not stable.
+ */
+export function cardMenu(page: Page, footerLink: string): Locator {
+  return page.locator('div.shadow-md', { has: page.getByRole('link', { name: footerLink }) }).getByRole('button', { name: 'More' })
+}

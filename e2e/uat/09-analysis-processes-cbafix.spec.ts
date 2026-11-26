@@ -4,7 +4,7 @@ import { Api } from './support/api'
 import { nextFromPool } from './support/data'
 import { authFile } from './support/auth'
 import { buildXlsx, readXlsx } from './support/xlsx'
-import { confirmDialog, dialog, expectAppReadable, unique } from './support/ui'
+import { confirmDialog, dialog, expectAppReadable, unique, cardMenu } from './support/ui'
 
 test.use({ storageState: authFile('crb') })
 test.describe.configure({ mode: 'serial' })
@@ -232,7 +232,7 @@ test.describe('CBA fix tools: the modify accounts grid and the file fixes', () =
     page,
   }) => {
     await page.goto('/home')
-    await page.getByRole('button', { name: 'More' }).nth(1).click()
+    await cardMenu(page, 'Review Credit Accounts').click()
     await page.getByRole('menuitem', { name: 'Update CBA Accounts' }).click()
     await expect(page).toHaveURL(/\/cba\/output/)
     const api = await Api.as('crb')

@@ -77,13 +77,21 @@ test.describe('CBA loans: list, details and repayments', () => {
     await readonly.dispose()
   })
 
-  test('securities can be added to a loan account from its page', async ({ page }) => {
+  test('securities can be added to a loan account from its page', async ({ page, browser }) => {
+    // the CRB operator holds no Create Collateral/Guarantors/Stakeholders, which the server checks on save: no add buttons (UD-07)
     const row = await loanRow(page, '/loans', 'UATLN0004')
     await row.hover()
     await row.getByRole('link', { name: 'Loan Details' }).click()
-    await expect(page.getByRole('button', { name: 'Add Collateral' })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Add Guarantors/ })).toBeVisible()
-    await expect(page.getByRole('button', { name: /Add Stakeholder/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Show / Hide' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Add Collateral' })).toHaveCount(0)
+    // a user who holds them (the development administrator holds every permission) gets all three
+    const ctx = await browser.newContext({ storageState: authFile('superadmin') })
+    const admin = await ctx.newPage()
+    await admin.goto(page.url())
+    await expect(admin.getByRole('button', { name: 'Add Collateral' })).toBeVisible()
+    await expect(admin.getByRole('button', { name: /Add Guarantors/ })).toBeVisible()
+    await expect(admin.getByRole('button', { name: /Add Stakeholder/ })).toBeVisible()
+    await ctx.close()
   })
 })
 
