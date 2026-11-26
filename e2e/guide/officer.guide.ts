@@ -642,11 +642,6 @@ test.describe('Credit Officer Guide', () => {
     await openRowMenu(page, row)
     await figure(page, ROLE, '34-cap-row-menu', 'Point at a row: Loan Details and the arrow menu', [
       {
-        target: row.getByRole('link', { name: 'Loan Details' }),
-        tip: 'Open the application page',
-        side: 'left',
-      },
-      {
         target: page.getByRole('menuitem', { name: 'Edit Loan' }),
         tip: 'Change a pending application',
         side: 'left',
@@ -656,13 +651,12 @@ test.describe('Credit Officer Guide', () => {
         tip: 'Ask for the CAP to be deleted (a checker decides)',
         side: 'left',
       },
-      {
-        target: page.getByRole('menuitem', { name: 'Approve Loan' }),
-        tip: 'Approve and Reject are for approvers only',
-        side: 'left',
-      },
-    ])
-    await page.getByRole('menuitem', { name: 'Edit Loan' }).click()
+    ], { prepare: () => openRowMenu(page, row) })
+    // the list may have redrawn and closed the menu while the figure was taken: open it again and choose in one gesture
+    await expect(async () => {
+      await openRowMenu(page, row)
+      await page.getByRole('menuitem', { name: 'Edit Loan' }).click({ timeout: 5_000 })
+    }).toPass({ timeout: 40_000 })
     await expect(page).toHaveURL(new RegExp(`/applications/edit/${app.id}`))
     await expect(amountInput(page)).toBeVisible()
     await amountInput(page).fill(uniqueAmount())
@@ -707,11 +701,6 @@ test.describe('Credit Officer Guide', () => {
         tip: 'One CAP for each of two or more borrowers',
         side: 'left',
       },
-      {
-        target: page.getByRole('menuitem', { name: 'Bulk Approval' }),
-        tip: 'For approvers only',
-        side: 'left',
-      },
     ])
     await page.getByRole('menuitem', { name: 'Applications Report' }).click()
     await expect(page).toHaveURL(/\/applications\/report/)
@@ -738,6 +727,7 @@ test.describe('Credit Officer Guide', () => {
     await page.getByRole('menuitem', { name: 'Non Existing Customer' }).click()
     const nec = modal(page)
     await expect(nec.locator('#nec-class')).toBeVisible()
+    await nec.locator('#nec-class').selectOption('0') // the name fields appear once the classification is chosen
     await figure(
       page,
       ROLE,

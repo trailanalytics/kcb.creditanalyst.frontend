@@ -236,7 +236,7 @@ export default {
         },
         { fig: '34-cap-row-menu' },
         {
-          tip: 'The arrow menu also shows Approve Loan and Reject Loan. They are for approvers; if you choose one you see “You don’t have access to this page”.',
+          tip: 'Approve Loan and Reject Loan appear in the arrow menu only for users allowed to approve.',
         },
         { h2: 'Edit a pending CAP' },
         {
@@ -257,7 +257,7 @@ export default {
       title: 'Joint applications and non-existing customers',
       blocks: [
         {
-          p: 'The arrow at the foot of the CAP card opens the Applications Report, Non Existing Customer and Joint Application. Bulk Approval is for approvers.',
+          p: 'The arrow at the foot of the CAP card opens the Applications Report, Non Existing Customer and Joint Application. Bulk Approval appears there only for approvers.',
         },
         { fig: '37-cap-card-menu' },
         { h2: 'A CAP for a customer with no profile' },

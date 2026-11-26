@@ -57,11 +57,6 @@ test.describe('Credit Approver Guide', () => {
     await openRowMenu(page, row)
     await figure(page, ROLE, '03-row-menu', 'Point at the row and open the arrow menu', [
       {
-        target: row.getByRole('link', { name: 'Loan Details' }),
-        tip: 'Look at the application first',
-        side: 'left',
-      },
-      {
         target: page.getByRole('menuitem', { name: 'Approve Loan' }),
         tip: 'Approve the application',
         side: 'left',
@@ -71,7 +66,7 @@ test.describe('Credit Approver Guide', () => {
         tip: 'Reject it with a reason',
         side: 'left',
       },
-    ])
+    ], { prepare: () => openRowMenu(page, row) })
     await page.keyboard.press('Escape')
 
     await page.goto(`/applications/show/${app.id}`)

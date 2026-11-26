@@ -85,6 +85,10 @@ const pr4Row = (transId: string, custId: string, balance: string) => [
   'Check Off', 'Salary loan', 'Households', 'Retail', '0', '0', custId, '1000000',
 ]
 
+/** The "More" arrow at the foot of the CBA card. */
+const cbaCardMenu = (page: Page) =>
+  page.locator('div.shadow-md', { has: page.getByRole('link', { name: 'Review Credit Accounts' }) }).getByRole('button', { name: 'More' })
+
 test.describe('CRB Officer Guide', () => {
   test('01 getting started: the dashboard and the CBA menu', async ({ page }) => {
     await page.goto('/home')
@@ -96,8 +100,8 @@ test.describe('CRB Officer Guide', () => {
       { target: page.getByRole('link', { name: 'Output Files', exact: true }), tip: 'The files kept after a submission' },
     ])
 
-    // the CBA tile is the second one with a menu (CAP is the first)
-    await page.getByRole('button', { name: 'More' }).nth(1).click()
+    // the arrow of the CBA card itself (which cards have a menu depends on the user's permissions)
+    await cbaCardMenu(page).click()
     await expect(page.getByRole('menuitem', { name: 'Update CBA Accounts' })).toBeVisible()
     await figure(page, ROLE, '01-cba-menu', 'The CBA menu on the dashboard', [
       { target: page.getByRole('menuitem', { name: 'Written-off Credit Account' }), tip: 'The loans you have written off' },
@@ -115,20 +119,19 @@ test.describe('CRB Officer Guide', () => {
     const row = page.getByTestId('loan-row').filter({ hasText: 'UATLN0001' })
     await expect(row).toHaveCount(1)
     await row.hover()
-    await expect(row.getByRole('link', { name: 'Loan Details' })).toBeVisible()
+    await expect(row.locator('a', { hasText: 'Loan Details' })).toBeVisible()
     await figure(page, ROLE, '02-loans-list', 'The CBA loans list', [
       { target: page.getByLabel('Search loans'), tip: 'Type a contract code or a name' },
-      { target: row.getByRole('link', { name: 'Loan Details' }), tip: 'Point at a loan and click Loan Details', side: 'below' },
+      { target: row.locator('a', { hasText: 'Loan Details' }), tip: 'Point at a loan and click Loan Details', side: 'below' },
       { target: row.getByRole('button', { name: 'More actions' }), tip: 'More actions: repayments, write-off, ignore', side: 'left' },
     ])
 
-    await row.getByRole('link', { name: 'Loan Details' }).click()
+    await row.locator('a', { hasText: 'Loan Details' }).click()
     await expect(page).toHaveURL(/\/loans\/show\/\d+/)
     await page.getByRole('button', { name: 'Show / Hide' }).click()
     await expect(page.getByTestId('loan-groups')).toContainText('UATLN0001')
     await figure(page, ROLE, '02-loan-details', 'The details of a loan', [
       { target: page.getByRole('link', { name: 'Repayments' }), tip: 'Click Repayments to see the payments' },
-      { target: page.getByRole('button', { name: 'Add Collateral' }), tip: 'Add a collateral, guarantor or stakeholder to the loan' },
       { target: page.getByRole('button', { name: 'Show / Hide' }), tip: 'Show or hide every field of the loan' },
     ])
 
@@ -589,7 +592,7 @@ test.describe('CRB Officer Guide', () => {
 
   test('14 CBA fix tools', async ({ page }) => {
     await page.goto('/home')
-    await page.getByRole('button', { name: 'More' }).nth(1).click()
+    await cbaCardMenu(page).click()
     await page.getByRole('menuitem', { name: 'Update CBA Accounts' }).click()
     await expect(page).toHaveURL(/\/cba\/output/)
     await page.getByPlaceholder('Enter Account Reference or Client Number').fill('UATLN0001')

@@ -36,6 +36,8 @@ export interface FigureOptions {
   /** Elements to blur (none of the fixture data is real, but a real name could appear in a shared list). */
   mask?: Locator[]
   margin?: number
+  /** Puts the page back in the state to capture (reopens a menu the list closed by redrawing); run again when a mark is gone. */
+  prepare?: () => Promise<void>
 }
 
 export async function figure(page: Page, role: string, id: string, caption: string, marks: Mark[] = [], opts: FigureOptions = {}) {
@@ -44,15 +46,14 @@ export async function figure(page: Page, role: string, id: string, caption: stri
   await page.waitForLoadState('networkidle').catch(() => {})
   await page.evaluate(() => document.fonts?.ready)
 
-  const boxes = []
-  for (const m of marks) {
-    await m.target.first().scrollIntoViewIfNeeded().catch(() => {})
+  let boxes: { x: number; y: number; width: number; height: number; tip: string; side: Mark['side'] | null; quiet: boolean }[] = []
+  for (let attempt = 1; ; attempt++) {
+    if (opts.prepare) await opts.prepare()
+    boxes = await measure(marks)
+    if (boxes.every(Boolean) || !opts.prepare || attempt >= 4) break
   }
-  for (const m of marks) {
-    const b = await m.target.first().boundingBox()
-    if (!b) throw new Error(`guide figure ${role}/${id}: mark "${m.tip}" is not visible`)
-    boxes.push({ ...b, tip: m.tip, side: m.side ?? null, quiet: !!m.quiet })
-  }
+  const lost = boxes.findIndex((b) => !b)
+  if (lost >= 0) throw new Error(`guide figure ${role}/${id}: mark "${marks[lost].tip}" is not visible`)
   await page.evaluate((items) => {
     const layer = document.createElement('div')
     layer.id = '__guide_layer'
@@ -118,4 +119,18 @@ export function message(role: string, text: string, what: string) {
   const list: { text: string; what: string }[] = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : []
   if (!list.some((m) => m.text === text)) list.push({ text, what })
   fs.writeFileSync(file, JSON.stringify(list, null, 1))
+}
+
+async function measure(marks: Mark[]) {
+  // lists reload after a search and dialogs animate in: wait until every marked element is on screen before measuring
+  for (const m of marks) {
+    await m.target.first().waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {})
+    await m.target.first().scrollIntoViewIfNeeded({ timeout: 5_000 }).catch(() => {})
+  }
+  const out = []
+  for (const m of marks) {
+    const b = await m.target.first().boundingBox({ timeout: 5_000 }).catch(() => null)
+    out.push(b ? { ...b, tip: m.tip, side: m.side ?? null, quiet: !!m.quiet } : (null as never))
+  }
+  return out
 }

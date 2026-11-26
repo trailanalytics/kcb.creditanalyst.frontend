@@ -89,7 +89,7 @@ export default {
         },
         { fig: '02-loans-list' },
         {
-          p: 'Loan Details shows the key facts at the top. Click **Show / Hide** for every field the CBA reports. From here you can add a collateral, guarantor or stakeholder to the loan.',
+          p: 'Loan Details shows the key facts at the top. Click **Show / Hide** for every field the CBA reports. Officers with the create permissions can add a collateral, guarantor or stakeholder to the loan from here.',
         },
         { fig: '02-loan-details' },
         { p: 'Repayments lists the payments from the T24 extract, newest first.' },

@@ -23,13 +23,17 @@ const date = opt('--date', new Intl.DateTimeFormat('en-GB', { day: 'numeric', mo
 const version = opt('--version', '1.0')
 const shots = path.resolve(opt('--shots', 'guide-out'))
 const here = path.dirname(new URL(import.meta.url).pathname)
-const roles = args.length ? args : fs.readdirSync(path.join(here, 'content')).filter((f) => f.endsWith('.mjs')).map((f) => f.replace(/\.mjs$/, ''))
+const contentDir = path.resolve(opt('--content-dir', path.join(here, 'content')))
+const resultsFile = opt('--results', null)
+const evidenceRoot = path.resolve(opt('--evidence', 'test-results/uat-runs'))
+const results = resultsFile ? JSON.parse(fs.readFileSync(resultsFile, 'utf8')) : null
+const roles = args.length ? args : fs.readdirSync(contentDir).filter((f) => f.endsWith('.mjs')).map((f) => f.replace(/\.mjs$/, ''))
 
 fs.mkdirSync(outDir, { recursive: true })
 const CLIENT = 'KCB Bank Uganda'
 
 for (const role of roles) {
-  const content = (await import(path.join(here, 'content', `${role}.mjs`))).default
+  const content = (await import(path.join(contentDir, `${role}.mjs`))).default
   const dir = path.join(shots, content.role)
   let figN = 0
   const missing = []
@@ -51,9 +55,11 @@ for (const role of roles) {
       ['Prepared by', 'Trail Analytics'],
     ],
   }))
-  body.push(...S.docControl([[version, date, 'First issue. Screenshots taken on a test copy of Credit Analyst 3.0 with made-up customers, loans and users.', 'Trail Analytics']]))
-  body.push(S.h2('How to read the screenshots'))
-  body.push(S.p('Orange outlines and numbered badges show where to click, in order. The tip next to each number says what it does. The same numbered steps are listed under each screenshot.'))
+  body.push(...S.docControl([[version, date, content.change ?? 'First issue. Screenshots taken on a test copy of Credit Analyst 3.0 with made-up customers, loans and users.', 'Trail Analytics']]))
+  if (content.howToRead !== false) {
+    body.push(S.h2('How to read the screenshots'))
+    body.push(S.p(content.howToRead ?? 'Orange outlines and numbered badges show where to click, in order. The tip next to each number says what it does. The same numbered steps are listed under each screenshot.'))
+  }
   body.push(...S.contents(titles))
 
   const renderBlocks = (blocks) => {
@@ -65,7 +71,47 @@ for (const role of roles) {
       else if (b.steps) body.push(...S.steps(b.steps))
       else if (b.bullets) body.push(...S.bullets(b.bullets))
       else if (b.table) body.push(S.table(b.table.head, b.table.rows, b.table.widths), S.p(''))
-      else if (b.fig) {
+      else if (b.image) {
+        if (!fs.existsSync(b.image)) { missing.push(b.image); continue }
+        figN += 1
+        body.push(...S.figure(b.image, figN, b.caption ?? '', b.marks ?? [], b.steps ?? [], b.maxHeight ?? 560))
+      } else if (b.resultsByModule && results) {
+        const runs = b.runs ?? Object.keys(results.runs)
+        const byModule = new Map()
+        for (const c of results.cases) {
+          if (!byModule.has(c.module)) byModule.set(c.module, [])
+          byModule.get(c.module).push(c)
+        }
+        const colour = (v) => ({ Yes: { text: 'Yes', color: S.C.green, bold: true }, No: { text: 'No', color: S.C.red, bold: true }, Partly: { text: 'Partly', color: S.C.amber, bold: true } })[v] ?? { text: v || '–' }
+        for (const [module, list] of byModule) {
+          body.push(S.h2(module))
+          const w = [1000, 9600 - 1000 - 1100 * runs.length - 1100, ...runs.map(() => 1100), 1100]
+          body.push(S.table(['Case', 'Title', ...runs.map((r) => b.labels?.[r] ?? r), 'Findings'],
+            list.map((c) => [c.case, c.title + (c.signoff ? ' (KCB sign-off)' : ''), ...runs.map((r) => colour(c.runs[r]?.verdict)), c.defects.join(', ')]), w), S.p(''))
+        }
+      } else if (b.runSummary && results) {
+        const rows = Object.entries(results.runs).map(([label, r]) => {
+          const st = r.stats ?? {}
+          return [b.labels?.[label] ?? label, String(st.expected ?? 0), String(st.unexpected ?? 0), String((st.skipped ?? 0)), `${Math.round((st.duration ?? 0) / 60000)} min`]
+        })
+        body.push(S.table(['Run', 'Passed', 'Failed', 'Not run', 'Time'], rows, [3600, 1500, 1500, 1500, 1500]), S.p(''))
+      } else if (b.defectsTable && results) {
+        const list = results.defects.filter((d) => !b.kinds || b.kinds.includes(d.kind))
+        body.push(S.table(['Id', 'Finding', 'Kind', 'Severity', 'Status'], list.map((d) => [d.id, d.title, d.kind ?? '', d.severity ?? '', d.status ?? '']), [800, 4900, 1300, 1200, 1400]), S.p(''))
+      } else if (b.defectDetails && results) {
+        for (const d of results.defects.filter((x) => !b.kinds || b.kinds.includes(x.kind))) {
+          body.push(S.h2(`${d.id} ${d.title}`))
+          const rows = [['Kind', d.kind], ['Severity', d.severity], ['Status', d.status], ['Cases', (d.cases ?? []).join(', ')], ['Found', [d.run, d.found_by].filter(Boolean).join('; ')],
+            ['Steps', d.steps], ['Expected', d.expected], ['Actual', d.actual], ['Cause', d.cause], ['Fix or plan', d.fix], ['Retest', d.retest], ['Decision needed from', d.gate]]
+            .filter(([, v]) => v)
+          body.push(S.table(['', ''], rows.map(([k, v]) => [{ text: k, bold: true }, v]), [1900, 7700]))
+          for (const e of d.evidence ?? []) {
+            const file = path.isAbsolute(e) ? e : path.join(evidenceRoot, e)
+            if (file.endsWith('.png') && fs.existsSync(file)) { figN += 1; body.push(...S.figure(file, figN, `${d.id}: screenshot taken when it was found`, [], [], 420)) }
+          }
+          body.push(S.p(''))
+        }
+      } else if (b.fig) {
         const meta = path.join(dir, `${b.fig}.json`)
         if (!fs.existsSync(meta)) { missing.push(b.fig); continue }
         const m = JSON.parse(fs.readFileSync(meta, 'utf8'))
@@ -102,9 +148,9 @@ for (const role of roles) {
     title: `${content.title} – ${content.subtitle}`,
     styles: S.styles,
     features: { updateFields: false },
-    sections: [{ properties: S.pageProps, ...S.headerFooter(`Credit Analyst 3.0 – ${content.subtitle}: ${content.title}`, `${CLIENT} · Trail Analytics`), children: body }],
+    sections: [{ properties: S.pageProps, ...S.headerFooter(content.header ?? `Credit Analyst 3.0 – ${content.subtitle}: ${content.title}`, `${CLIENT} · Trail Analytics`), children: body }],
   })
-  const file = path.join(outDir, `Credit Analyst 3.0 - ${content.title}.docx`)
+  const file = path.join(outDir, content.fileName ?? `Credit Analyst 3.0 - ${content.title}.docx`)
   fs.writeFileSync(file, await Packer.toBuffer(doc))
   console.log(`${file}  (${figN} figures)`)
 }
