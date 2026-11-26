@@ -15,3 +15,6 @@ test-results
 
 # executable UAT
 /e2e/uat/.auth
+
+# stakeholder guide screenshots
+/guide-out

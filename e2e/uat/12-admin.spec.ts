@@ -70,7 +70,8 @@ test.describe('admin: users', () => {
     await page.getByLabel('Authentication').selectOption('credit_analyst')
     await page.locator('input[type="password"]').fill('short')
     await page.getByRole('button', { name: 'Create User' }).click()
-    await expect(page.getByText('The password must be at least 8 characters.')).toBeVisible()
+    // the password policy of the security work (12 characters at least, D-1200 register) is checked before the e-mail
+    await expect(page.getByText('The password must be at least 12 characters.')).toBeVisible()
     await page.locator('input[type="password"]').fill('LongEnough#2026')
     await page.getByRole('button', { name: 'Create User' }).click()
     await expect(dialog(page)).toContainText('A user with the same email account already exists!')

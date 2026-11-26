@@ -98,9 +98,11 @@ test.describe('T24 sync: commands, credentials, mapping and forex rates', () => 
     await page.getByRole('tab', { name: 'T24 Password' }).click()
     await expect(page.getByText('No credentials are saved yet.')).toBeVisible()
     const save = await api.put('/api/v1/t24/credentials', { username: 'x', password: 'y' })
-    // the password is stored encrypted: without the hashing key of the deployment it cannot be saved
-    expect(save.status).toBe(503)
-    expect(JSON.stringify(save.body)).toContain('SECRET_HASHING_KEY')
+    // nothing is saved, and the answer names what the deployment is missing: the hashing key the password is encrypted with
+    // (503), or, with the key set, the warehouse address the login is tried against before it is saved (422)
+    expect([503, 422]).toContain(save.status)
+    expect(JSON.stringify(save.body)).toContain(save.status === 503 ? 'SECRET_HASHING_KEY' : 'T24_SERVICE')
+    expect((await api.get('/api/v1/t24/database')).body.configured).toBe(false)
     await api.dispose()
   })
 

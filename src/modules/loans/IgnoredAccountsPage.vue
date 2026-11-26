@@ -43,7 +43,13 @@ async function addAccounts() {
   try {
     const result = await loansApi.ignore(parseContractCodes(answer.value))
     hideLoader()
-    await swalNotification('success', result.message)
+    // codes that match no loan yet are kept on the list (they are left out once the loan arrives), but the user is told which
+    // ones: a typing mistake would otherwise go unnoticed (UAT finding UD-11)
+    const notice = [
+      result.already_ignored?.length ? `Already on the list: ${result.already_ignored.join(', ')}.` : '',
+      result.unknown?.length ? `No loan account has the contract code ${result.unknown.join(', ')} yet; check the code.` : '',
+    ].filter(Boolean)
+    await swalNotification(notice.length ? 'warning' : 'success', [result.message, ...notice].join(' '))
     await list.value?.reload()
   } catch (e) {
     hideLoader()

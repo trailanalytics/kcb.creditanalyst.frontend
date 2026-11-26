@@ -1,11 +1,13 @@
 import { expect, type Locator, type Page } from '@playwright/test'
 import { PERSONAS, passwordOf, type Persona } from './env'
+import { shot } from './evidence'
 
 /** Sign in on the login screen the way a user does. */
 export async function loginViaUi(page: Page, persona: Persona, password = passwordOf(persona)) {
   await page.goto('/login')
   await page.getByPlaceholder('KCB User ID/Email').fill(PERSONAS[persona])
   await page.getByPlaceholder('Password').fill(password)
+  await shot(page, `login ${persona}`)
   await page.getByRole('button', { name: 'Login' }).click()
 }
 
@@ -17,11 +19,14 @@ export function dialog(page: Page): Locator {
 /** Click the confirm button of the open SweetAlert (OK, Yes ..). */
 export async function confirmDialog(page: Page, name?: string | RegExp) {
   const button = name ? page.locator('.swal2-confirm', { hasText: name }) : page.locator('.swal2-confirm')
+  await button.first().waitFor({ timeout: 45_000 }).catch(() => {})
+  await shot(page, 'dialog before confirm')
   await button.click()
 }
 
 export async function expectDialogText(page: Page, text: string | RegExp) {
   await expect(dialog(page)).toContainText(text)
+  await shot(page, 'dialog message')
 }
 
 /** The izitoast toasts at the bottom left. */
@@ -53,6 +58,7 @@ export async function rowMenu(page: Page, row: Locator, item: string | RegExp) {
     await row.getByRole('button', { name: 'More actions' }).click()
     await page.getByRole('menuitem', { name: item }).click({ timeout: 5_000 })
   }).toPass({ timeout: 40_000 })
+  await shot(page, `row action ${String(item)}`)
 }
 
 export interface ProfileFill {
@@ -152,6 +158,7 @@ export function modal(page: Page): Locator {
 export async function chooseFromMenu(page: Page, trigger: string | RegExp, item: string | RegExp) {
   await page.getByRole('button', { name: trigger }).click()
   await page.getByRole('menuitem', { name: item, exact: typeof item === 'string' }).click()
+  await shot(page, `menu ${String(item)}`)
 }
 
 /** The visible text box of a MoneyInput found by the name of its hidden twin, inside `root`. */
