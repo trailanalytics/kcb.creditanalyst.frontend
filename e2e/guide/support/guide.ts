@@ -58,6 +58,7 @@ export async function figure(page: Page, role: string, id: string, caption: stri
     const layer = document.createElement('div')
     layer.id = '__guide_layer'
     layer.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:2147483647;font-family:Arial,Helvetica,sans-serif'
+    document.body.appendChild(layer) // attached first: the tips are measured (offsetWidth) as they are placed
     const W = window.innerWidth
     const H = window.innerHeight
     const pad = 4
@@ -86,7 +87,10 @@ export async function figure(page: Page, role: string, id: string, caption: stri
       tip.textContent = `${n}. ${b.tip}`
       tip.style.cssText = 'position:fixed;max-width:230px;padding:5px 8px;background:#fff;border:1.5px solid #E8731C;border-radius:5px;color:#222;font-size:12px;line-height:1.3;box-shadow:0 1px 3px rgba(0,0,0,.25)'
       layer.appendChild(tip)
-      const tw = Math.min(230, tip.offsetWidth)
+      tip.style.whiteSpace = 'nowrap'
+      const natural = tip.offsetWidth
+      tip.style.whiteSpace = 'normal'
+      const tw = Math.min(230, Math.max(60, natural))
       tip.style.width = `${tw}px` // keep the measured width: a box pushed against the edge would otherwise wrap into a narrow column
       const th = tip.offsetHeight
       const at = (side: string, shift = 0): R => {
@@ -115,7 +119,6 @@ export async function figure(page: Page, role: string, id: string, caption: stri
       tip.style.top = `${best.t}px`
       taken.push({ l: best.l - 4, t: best.t - 4, r: best.r + 4, b: best.b + 4 })
     })
-    document.body.appendChild(layer)
   }, boxes)
 
   let clip

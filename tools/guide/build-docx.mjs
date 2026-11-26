@@ -82,10 +82,12 @@ for (const role of roles) {
           if (!byModule.has(c.module)) byModule.set(c.module, [])
           byModule.get(c.module).push(c)
         }
-        const colour = (v) => ({ Yes: { text: 'Yes', color: S.C.green, bold: true }, No: { text: 'No', color: S.C.red, bold: true }, Partly: { text: 'Partly', color: S.C.amber, bold: true } })[v] ?? { text: v || '–' }
+        const colour = (v) => ({ Yes: { text: 'Yes', color: S.C.green, bold: true }, No: { text: 'No', color: S.C.red, bold: true }, Partly: { text: 'Partly', color: S.C.amber, bold: true }, 'Not run': { text: '–', color: '999999' } })[v] ?? { text: v || '–' }
         for (const [module, list] of byModule) {
           body.push(S.h2(module))
-          const w = [1000, 9600 - 1000 - 1100 * runs.length - 1100, ...runs.map(() => 1100), 1100]
+          // the title keeps at least a third of the width however many runs there are
+          const runW = Math.min(1100, Math.floor((9600 - 900 - 900 - 3200) / runs.length))
+          const w = [900, 9600 - 900 - 900 - runW * runs.length, ...runs.map(() => runW), 900]
           body.push(S.table(['Case', 'Title', ...runs.map((r) => b.labels?.[r] ?? r), 'Findings'],
             list.map((c) => [c.case, c.title + (c.signoff ? ' (KCB sign-off)' : ''), ...runs.map((r) => colour(c.runs[r]?.verdict)), c.defects.join(', ')]), w), S.p(''))
         }
