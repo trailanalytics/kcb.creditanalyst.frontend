@@ -182,6 +182,7 @@ test.describe('background processes', () => {
   test('a T24 command without a warehouse fails visibly and a manager marks the failed process complete', async ({
     page,
   }) => {
+    test.skip(process.env.UAT_WAREHOUSE === '1', 'asserts the state without a warehouse')
     const api = await Api.as('admin')
     const started = await api.post('/api/v1/t24/commands/customers/run', {})
     expect([200, 202]).toContain(started.status)

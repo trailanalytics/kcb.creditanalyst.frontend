@@ -59,6 +59,7 @@ test.describe('T24 sync: commands, credentials, mapping and forex rates', () => 
   test('running a command without a warehouse starts a process that fails with the reason (needs a real Oracle to succeed)', async ({
     page,
   }) => {
+    test.skip(globalThis.process.env.UAT_WAREHOUSE === '1', 'asserts the state without a warehouse')
     await page.goto('/t24')
     await page.getByRole('tab', { name: 'T24 Commands' }).click()
     await page.getByRole('button', { name: 'Run Command' }).click()
@@ -91,6 +92,7 @@ test.describe('T24 sync: commands, credentials, mapping and forex rates', () => 
   test('the warehouse login is not saved while no warehouse is set up, and the status says so', async ({
     page,
   }) => {
+    test.skip(process.env.UAT_WAREHOUSE === '1', 'asserts the state without a warehouse')
     const api = await Api.as('admin')
     const database = await api.get('/api/v1/t24/database')
     expect(database.body.configured).toBe(false)
