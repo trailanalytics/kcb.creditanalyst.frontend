@@ -28,8 +28,10 @@ server {
         include /etc/nginx/snippets/proxy-api.conf;
     }
 
-    location ~ ^/api/v1/(analysis/pr4|output-files/) {
-        client_max_body_size 100m;  # PR4 / feedback uploads
+    # the paths the backend lets take 100 MB (creditanalyst.uploads in application.yml): PR4, bureau feedback and the CBA fix files
+    # (UAT finding UD-24: cba/fix was missing, so a large delete-records or fix-customer file stopped here with 413)
+    location ~ ^/api/v1/(analysis/pr4|output-files/|cba/fix/) {
+        client_max_body_size 100m;  # PR4 / feedback / CBA fix uploads
         proxy_pass ${API_UPSTREAM};
         include /etc/nginx/snippets/proxy-api.conf;
     }

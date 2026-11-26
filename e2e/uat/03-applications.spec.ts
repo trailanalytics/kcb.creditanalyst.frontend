@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { Api } from './support/api'
 import { authFile } from './support/auth'
-import { CUSTOMER } from './support/env'
+import { CUSTOMER, BRANCH } from './support/env'
 import { application, createApplication, nextPoolLoan } from './support/data'
 import {
   confirmDialog,
@@ -40,7 +40,7 @@ async function fillLoan(
   await page.locator('#cap-term').fill(loan.term ?? '12')
   await page.getByLabel('Term period').selectOption(loan.period ?? 'Month')
   await page.locator('#cap-purpose').selectOption(loan.purpose ?? '1')
-  await page.locator('#cap-branch').selectOption('001')
+  await page.locator('#cap-branch').selectOption(BRANCH)
 }
 
 test.describe('UAT-06: create a loan application', () => {
@@ -140,7 +140,7 @@ test.describe('UAT-07: edit a pending application', () => {
     await amountInput(page).fill(newAmount)
     await page.locator('#cap-purpose').selectOption('2')
     await page.getByRole('button', { name: 'Proceed' }).click()
-    await expect(dialog(page)).toContainText('Application Created Successfully')
+    await expect(dialog(page)).toContainText('Application Updated Successfully')
     await confirmDialog(page, 'OK')
     await expect(page).toHaveURL(new RegExp(`/applications/show/${created.id}`))
     const saved = await application(api, created.id)
@@ -184,6 +184,24 @@ test.describe('UAT-07: edit a pending application', () => {
     const page = await ctx.newPage()
     const officer = await Api.as('officer')
     const created = await createApplication(officer, { clientNumber: CUSTOMER.spare[1] })
+    // the row menu of the list offers Edit Loan only with Edit Applications (UD-06: it was shown and led to 403). The approver sees
+    // every application and may approve, but not edit; the officer may edit, but not approve.
+    for (const [persona, absent, present] of [
+      ['approver', 'Edit Loan', 'Approve Loan'],
+      ['officer', 'Approve Loan', 'Edit Loan'],
+    ] as const) {
+      const other = await browser.newContext({ storageState: authFile(persona) })
+      const list = await other.newPage()
+      await list.goto('/applications')
+      await list.getByPlaceholder('search...').fill(created.creditApplicationReference)
+      const row = list.locator('div.group', { hasText: created.creditApplicationReference })
+      await expect(row).toHaveCount(1)
+      await row.hover()
+      await row.getByRole('button', { name: 'More actions' }).click()
+      await expect(list.getByRole('menuitem', { name: present })).toBeVisible()
+      await expect(list.getByRole('menuitem', { name: absent })).toHaveCount(0)
+      await other.close()
+    }
     await page.goto(`/applications/edit/${created.id}`)
     await expect(page).toHaveURL(/\/errors\/403/)
     const readonly = await Api.as('readonly')

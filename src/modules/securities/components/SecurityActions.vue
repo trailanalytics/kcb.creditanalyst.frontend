@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from 'reka-ui'
 import { useSecurities } from '../useSecurities'
+import { useAuthStore } from '@/stores/auth'
 import type { SecurityContext } from '../types'
 
 /**
@@ -20,6 +21,8 @@ const props = withDefaults(
   { stakeholders: true, existingStakeholder: false },
 )
 const session = useSecurities(props.context)
+// the buttons follow the permissions the server checks on save (UAT finding UD-07); without them the dialog only ends in a refusal
+const auth = useAuthStore()
 const locked = computed(() => session.overview?.context.editable === false)
 
 const item = 'block w-full px-4 py-2 text-left text-sm outline-none data-[highlighted]:bg-slate-100'
@@ -27,7 +30,7 @@ const item = 'block w-full px-4 py-2 text-left text-sm outline-none data-[highli
 
 <template>
   <div class="flex flex-wrap gap-2">
-    <DropdownMenuRoot>
+    <DropdownMenuRoot v-if="auth.has('Create Guarantors')">
       <DropdownMenuTrigger class="btn-outline" :disabled="locked">Add Guarantors ▾</DropdownMenuTrigger>
       <DropdownMenuPortal>
         <DropdownMenuContent
@@ -56,11 +59,17 @@ const item = 'block w-full px-4 py-2 text-left text-sm outline-none data-[highli
       </DropdownMenuPortal>
     </DropdownMenuRoot>
 
-    <button type="button" class="btn-outline" :disabled="locked" @click="session.openCollateral()">
+    <button
+      v-if="auth.has('Create Collateral')"
+      type="button"
+      class="btn-outline"
+      :disabled="locked"
+      @click="session.openCollateral()"
+    >
       Add Collateral
     </button>
 
-    <DropdownMenuRoot v-if="stakeholders">
+    <DropdownMenuRoot v-if="stakeholders && auth.has('Create Stakeholders')">
       <DropdownMenuTrigger class="btn-outline" :disabled="locked">Add Stakeholder ▾</DropdownMenuTrigger>
       <DropdownMenuPortal>
         <DropdownMenuContent

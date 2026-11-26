@@ -70,6 +70,7 @@ export function money(n: number | string): string {
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { authFile } from './auth'
+import { BRANCH } from './env'
 
 const POOL_FILE = authFile('officer').replace('officer.json', 'pool.json')
 
@@ -209,7 +210,7 @@ function personBody(applicationReference: string, surname: string, fcs: string, 
   return {
     referenceNumber: applicationReference,
     classificationCode: '0',
-    branchCode: '001',
+    branchCode: BRANCH,
     GSCAFB_Surname: surname,
     GSCAFB_Forename1: 'Uat',
     II_FCSNumber: fcs,

@@ -59,6 +59,7 @@ test.describe('T24 sync: commands, credentials, mapping and forex rates', () => 
   test('running a command without a warehouse starts a process that fails with the reason (needs a real Oracle to succeed)', async ({
     page,
   }) => {
+    test.skip(globalThis.process.env.UAT_WAREHOUSE === '1', 'asserts the state without a warehouse')
     await page.goto('/t24')
     await page.getByRole('tab', { name: 'T24 Commands' }).click()
     await page.getByRole('button', { name: 'Run Command' }).click()
@@ -91,6 +92,7 @@ test.describe('T24 sync: commands, credentials, mapping and forex rates', () => 
   test('the warehouse login is not saved while no warehouse is set up, and the status says so', async ({
     page,
   }) => {
+    test.skip(process.env.UAT_WAREHOUSE === '1', 'asserts the state without a warehouse')
     const api = await Api.as('admin')
     const database = await api.get('/api/v1/t24/database')
     expect(database.body.configured).toBe(false)
@@ -98,9 +100,11 @@ test.describe('T24 sync: commands, credentials, mapping and forex rates', () => 
     await page.getByRole('tab', { name: 'T24 Password' }).click()
     await expect(page.getByText('No credentials are saved yet.')).toBeVisible()
     const save = await api.put('/api/v1/t24/credentials', { username: 'x', password: 'y' })
-    // the password is stored encrypted: without the hashing key of the deployment it cannot be saved
-    expect(save.status).toBe(503)
-    expect(JSON.stringify(save.body)).toContain('SECRET_HASHING_KEY')
+    // nothing is saved, and the answer names what the deployment is missing: the hashing key the password is encrypted with
+    // (503), or, with the key set, the warehouse address the login is tried against before it is saved (422)
+    expect([503, 422]).toContain(save.status)
+    expect(JSON.stringify(save.body)).toContain(save.status === 503 ? 'SECRET_HASHING_KEY' : 'T24_SERVICE')
+    expect((await api.get('/api/v1/t24/database')).body.configured).toBe(false)
     await api.dispose()
   })
 

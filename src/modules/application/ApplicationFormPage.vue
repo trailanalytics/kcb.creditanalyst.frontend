@@ -130,7 +130,7 @@ async function proceed() {
       : await applicationsApi.create(body)
     hideLoader()
     await router.push(`/applications/show/${saved.id}`)
-    await swalNotification('success', 'Application Created Successfully')
+    await swalNotification('success', editing.value ? 'Application Updated Successfully' : 'Application Created Successfully')
   } catch (e) {
     await showFailure(e)
   } finally {

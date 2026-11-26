@@ -1,6 +1,8 @@
 /** Where the UAT runs and which local users it signs in with. All values are local development ones (see .env.example). */
 export const BASE_URL = process.env.UAT_BASE_URL ?? 'http://localhost:5242'
 export const PASSWORD = process.env.UAT_USER_PASSWORD ?? 'Uat#Local2026'
+/** The branch the cases choose on forms: the fixture branch 001, or a real branch code when the suite runs on a copy of production. */
+export const BRANCH = process.env.UAT_BRANCH ?? '001'
 
 /** The development administrator created by the compose stack (SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD). */
 export const SUPER_ADMIN = {

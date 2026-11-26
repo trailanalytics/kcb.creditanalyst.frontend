@@ -70,7 +70,6 @@ async function find() {
                 <RouterLink :to="`/borrowers/${profile.id}`" class="font-medium text-project">{{
                   profile.full_name.trim() || 'Unnamed customer'
                 }}</RouterLink>
-                <div class="text-xs text-muted">Running Loans: 00</div>
               </td>
               <td class="px-4 py-3">{{ profile.clientNumber }}</td>
               <td class="px-4 py-3">{{ profile.II_FCSNumber }}</td>

@@ -5,7 +5,7 @@ import { authFile } from './support/auth'
 import { CUSTOMER } from './support/env'
 import { createApplication } from './support/data'
 import { buildXlsx } from './support/xlsx'
-import { confirmDialog, dialog, expectAppReadable } from './support/ui'
+import { confirmDialog, dialog, expectAppReadable, today } from './support/ui'
 
 test.use({ storageState: authFile('crb') })
 // the CBA run is shared by the cases of this file and only one may be active: run them in order
@@ -36,8 +36,12 @@ async function fillReportForm(
   }
 }
 
-async function downloadReport(page: Page, type: string): Promise<{ text: string; name: string }> {
-  await fillReportForm(page, type)
+async function downloadReport(
+  page: Page,
+  type: string,
+  to?: { d: string; m: string; y: string },
+): Promise<{ text: string; name: string }> {
+  await fillReportForm(page, type, undefined, to)
   const download = page.waitForEvent('download')
   await page.getByTestId('download').click()
   const file = await download
@@ -63,8 +67,10 @@ test.describe('the CRB files that are built while the request waits', () => {
   test('CAP lists the applications of the period', async ({ page }) => {
     const api = await Api.as('officer')
     const app = await createApplication(api, { clientNumber: CUSTOMER.spare[0] })
-    const { text, name } = await downloadReport(page, 'CAP')
-    expect(name).toBe('CB01120261031CAP.csv')
+    // the application is dated today, so the period must reach today (a fixed end date stops matching once the month is over)
+    const [y, m, d] = today().split('-')
+    const { text, name } = await downloadReport(page, 'CAP', { d: String(Number(d)), m: String(Number(m)), y })
+    expect(name).toBe(`CB011${y}${m}${d}CAP.csv`)
     expect(text).toContain(app.creditApplicationReference)
     expect(lines(text)[0]).toContain('"CAP"')
     await api.dispose()

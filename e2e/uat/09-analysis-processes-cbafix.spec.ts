@@ -4,7 +4,7 @@ import { Api } from './support/api'
 import { nextFromPool } from './support/data'
 import { authFile } from './support/auth'
 import { buildXlsx, readXlsx } from './support/xlsx'
-import { confirmDialog, dialog, expectAppReadable, unique } from './support/ui'
+import { confirmDialog, dialog, expectAppReadable, unique, cardMenu } from './support/ui'
 
 test.use({ storageState: authFile('crb') })
 test.describe.configure({ mode: 'serial' })
@@ -182,6 +182,7 @@ test.describe('background processes', () => {
   test('a T24 command without a warehouse fails visibly and a manager marks the failed process complete', async ({
     page,
   }) => {
+    test.skip(process.env.UAT_WAREHOUSE === '1', 'asserts the state without a warehouse')
     const api = await Api.as('admin')
     const started = await api.post('/api/v1/t24/commands/customers/run', {})
     expect([200, 202]).toContain(started.status)
@@ -231,7 +232,7 @@ test.describe('CBA fix tools: the modify accounts grid and the file fixes', () =
     page,
   }) => {
     await page.goto('/home')
-    await page.getByRole('button', { name: 'More' }).nth(1).click()
+    await cardMenu(page, 'Review Credit Accounts').click()
     await page.getByRole('menuitem', { name: 'Update CBA Accounts' }).click()
     await expect(page).toHaveURL(/\/cba\/output/)
     const api = await Api.as('crb')

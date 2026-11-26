@@ -56,10 +56,10 @@ describe('nginx security headers', () => {
     expect(proxy).not.toContain('$proxy_add_x_forwarded_for')
   })
 
-  it('limits request bodies: 21m for the API, 100m only for the two big upload paths', () => {
+  it('limits request bodies: 21m for the API, 100m only for the big upload paths (PR4, feedback files, CBA fix files: UD-24)', () => {
     expect(template).toMatch(/client_max_body_size 21m;/)
     const big = locations().filter((l) => l.body.includes('client_max_body_size 100m'))
-    expect(big.map((l) => l.head)).toEqual(['~ ^/api/v1/(analysis/pr4|output-files/)'])
+    expect(big.map((l) => l.head)).toEqual(['~ ^/api/v1/(analysis/pr4|output-files/|cba/fix/)'])
   })
 
   it('proxies the API through the shared snippet', () => {

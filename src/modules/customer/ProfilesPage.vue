@@ -66,7 +66,6 @@ async function remove(c: CustomerRow) {
                   <RouterLink :to="`/borrowers/${c.id}`" class="font-medium text-project">{{
                     c.full_name.trim() || 'Unnamed customer'
                   }}</RouterLink>
-                  <div class="text-xs text-muted">Running Loans: 00</div>
                 </div>
               </div>
             </td>

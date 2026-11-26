@@ -422,10 +422,12 @@ describe('delete request button: CAP list', () => {
   })
 
   it('shows Delete Loan in the menu only with Delete Applications', async () => {
-    const without = mountWith(ApplicationsPage, [], [app()], true)
+    const without = mountWith(ApplicationsPage, ['Edit Applications'], [app()], true)
     await flushPromises()
     await openMenu(without)
     expect(document.body.textContent).toContain('Edit Loan')
+    // Approve/Reject follow their own permission (UAT finding UD-06)
+    expect(document.body.textContent).not.toContain('Approve Loan')
     expect(deleteItem()).toBeUndefined()
     without.unmount()
 

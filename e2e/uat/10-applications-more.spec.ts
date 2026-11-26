@@ -2,10 +2,10 @@ import { readFile } from 'node:fs/promises'
 import { expect, test } from '@playwright/test'
 import { Api } from './support/api'
 import { authFile } from './support/auth'
-import { CUSTOMER } from './support/env'
+import { CUSTOMER, BRANCH } from './support/env'
 import { application, createApplication, nextFromPool, nextPoolLoan } from './support/data'
 import { buildXlsx, readXlsx } from './support/xlsx'
-import { confirmDialog, dialog, expectAppReadable, uniqueAmount } from './support/ui'
+import { confirmDialog, dialog, expectAppReadable, uniqueAmount, cardMenu } from './support/ui'
 
 const xlsxType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
@@ -101,7 +101,7 @@ test.describe('UAT-24: export loan applications', () => {
       'reject',
     )
     await page.goto('/home')
-    await page.getByRole('button', { name: 'More' }).first().click()
+    await cardMenu(page, 'Manage Credit Applications').click()
     await page.getByRole('menuitem', { name: 'Applications Report' }).click()
     await expect(page).toHaveURL(/\/applications\/report/)
     await page.getByLabel('Status').selectOption({ label: 'Pending' })
@@ -192,7 +192,7 @@ test.describe('joint application and bulk approval', () => {
       await page.locator(`#cap${i}-term`).fill('12')
       await page.locator('select[aria-label="Term period"]').nth(i).selectOption('Month')
       await page.locator(`#cap${i}-purpose`).selectOption('1')
-      await page.locator(`#cap${i}-branch`).selectOption('001')
+      await page.locator(`#cap${i}-branch`).selectOption(BRANCH)
       await page.locator('input[name="amount"] >> xpath=preceding-sibling::input').nth(i).fill(amount)
     }
     await page.getByRole('button', { name: 'Proceed' }).click()

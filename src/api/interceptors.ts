@@ -45,12 +45,19 @@ export function installErrorHandling(router: Router) {
         if (result.isConfirmed) window.location.reload()
       } else if (status >= 500) {
         const reference = problem?.reference
+        // a 503 without an error reference is a setting the deployment lacks (for example the warehouse hashing key) and its
+        // reason is written for the administrator: show it rather than the generic text (UAT finding UD-12)
+        const reason = status === 503 && !reference && problem?.detail ? String(problem.detail) : null
         const result = await swalConfirm.fire({
           icon: 'error',
-          title: 'Something went wrong',
-          html: reference
-            ? `An unexpected error stopped this request.<br><small>Error reference: <b>${reference}</b></small>`
-            : 'An unexpected error stopped this request.',
+          title: reason ? 'Not available' : 'Something went wrong',
+          ...(reason
+            ? { text: reason }
+            : {
+                html: reference
+                  ? `An unexpected error stopped this request.<br><small>Error reference: <b>${reference}</b></small>`
+                  : 'An unexpected error stopped this request.',
+              }),
           confirmButtonText: reference ? 'Notify IT' : 'OK',
           showCancelButton: Boolean(reference),
           cancelButtonText: 'Close',

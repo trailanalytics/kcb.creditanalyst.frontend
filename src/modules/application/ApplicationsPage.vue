@@ -125,21 +125,24 @@ const idLabel = (a: Application) =>
                   align="end"
                   class="z-50 min-w-40 rounded border border-slate-200 bg-white py-1 shadow-lg"
                 >
-                  <DropdownMenuItem as-child>
-                    <RouterLink
-                      :to="`/applications/change-status/${a.id}`"
-                      class="block px-4 py-2 text-sm outline-none data-[highlighted]:bg-slate-100"
-                      >Approve Loan</RouterLink
-                    >
-                  </DropdownMenuItem>
-                  <DropdownMenuItem as-child>
-                    <RouterLink
-                      :to="`/applications/change-status/${a.id}`"
-                      class="block px-4 py-2 text-sm text-danger outline-none data-[highlighted]:bg-slate-100"
-                      >Reject Loan</RouterLink
-                    >
-                  </DropdownMenuItem>
-                  <DropdownMenuItem as-child>
+                  <!-- offered only to users the page behind them lets in (UAT finding UD-06; Laravel showed them to all) -->
+                  <template v-if="auth.has('Approve/Reject Applications')">
+                    <DropdownMenuItem as-child>
+                      <RouterLink
+                        :to="`/applications/change-status/${a.id}`"
+                        class="block px-4 py-2 text-sm outline-none data-[highlighted]:bg-slate-100"
+                        >Approve Loan</RouterLink
+                      >
+                    </DropdownMenuItem>
+                    <DropdownMenuItem as-child>
+                      <RouterLink
+                        :to="`/applications/change-status/${a.id}`"
+                        class="block px-4 py-2 text-sm text-danger outline-none data-[highlighted]:bg-slate-100"
+                        >Reject Loan</RouterLink
+                      >
+                    </DropdownMenuItem>
+                  </template>
+                  <DropdownMenuItem v-if="auth.has('Edit Applications')" as-child>
                     <RouterLink
                       :to="`/applications/edit/${a.id}`"
                       class="block px-4 py-2 text-sm outline-none data-[highlighted]:bg-slate-100"
