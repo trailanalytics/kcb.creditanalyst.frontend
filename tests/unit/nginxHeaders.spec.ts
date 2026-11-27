@@ -46,9 +46,15 @@ describe('nginx security headers', () => {
   })
 
   it('sends HSTS only when the request came in over TLS', () => {
-    expect(template).toMatch(/map \$scheme \$hsts_header \{\s*default ""/)
+    expect(template).toMatch(/map \$client_scheme \$hsts_header \{\s*default ""/)
     expect(headers).toContain('Strict-Transport-Security $hsts_header')
     expect(proxy).toContain('Strict-Transport-Security $hsts_header')
+  })
+
+  it('keeps https from a TLS proxy in front (host nginx, IIS, ingress) and never downgrades to it', () => {
+    expect(template).toMatch(/map \$http_x_forwarded_proto \$client_scheme \{\s*default \$scheme;\s*https\s+https;\s*\}/)
+    expect(proxy).toContain('proxy_set_header X-Forwarded-Proto $client_scheme;')
+    expect(proxy).not.toContain('X-Forwarded-Proto $scheme')
   })
 
   it('sets, not appends, the client address it passes to the API', () => {

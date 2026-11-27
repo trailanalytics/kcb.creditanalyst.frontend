@@ -31,6 +31,7 @@ const roles = args.length ? args : fs.readdirSync(contentDir).filter((f) => f.en
 
 fs.mkdirSync(outDir, { recursive: true })
 const CLIENT = 'KCB Bank Uganda'
+const AUTHOR = 'Trail Analytics'
 
 for (const role of roles) {
   const content = (await import(path.join(contentDir, `${role}.mjs`))).default
@@ -50,14 +51,15 @@ for (const role of roles) {
     meta: [
       ['Applies to', content.appliesTo],
       ['Intended for', content.audience ?? ''],
-      ['Version', `${version} – for user acceptance testing`],
+      // versionNote: what this issue is for (the stakeholder guides were for user acceptance testing)
+      ['Version', `${version}${content.versionNote ?? ' – for user acceptance testing'}`],
       ['Date', date],
-      ['Prepared by', 'Trail Analytics'],
+      ['Prepared by', AUTHOR],
     ],
   }))
-  body.push(...S.docControl([[version, date, content.change ?? 'First issue. Screenshots taken on a test copy of Credit Analyst 3.0 with made-up customers, loans and users.', 'Trail Analytics']]))
+  body.push(...S.docControl([[version, date, content.change ?? 'First issue. Screenshots taken on a test copy of Credit Analyst 3.0 with made-up customers, loans and users.', AUTHOR]]))
   if (content.howToRead !== false) {
-    body.push(S.h2('How to read the screenshots'))
+    body.push(S.h2(content.howToReadTitle ?? 'How to read the screenshots'))
     body.push(S.p(content.howToRead ?? 'Orange outlines and numbered badges show where to click, in order. The tip next to each number says what it does. The same numbered steps are listed under each screenshot.'))
   }
   body.push(...S.contents(titles))
@@ -70,6 +72,7 @@ for (const role of roles) {
       else if (b.note) body.push(S.tip(b.note, 'Note'), S.p(''))
       else if (b.steps) body.push(...S.steps(b.steps))
       else if (b.bullets) body.push(...S.bullets(b.bullets))
+      else if (b.code) body.push(S.code(b.code), S.p(''))
       else if (b.table) body.push(S.table(b.table.head, b.table.rows, b.table.widths), S.p(''))
       else if (b.image) {
         if (!fs.existsSync(b.image)) { missing.push(b.image); continue }
@@ -146,11 +149,11 @@ for (const role of roles) {
   }
 
   const doc = new Document({
-    creator: 'Trail Analytics',
+    creator: AUTHOR,
     title: `${content.title} – ${content.subtitle}`,
     styles: S.styles,
     features: { updateFields: false },
-    sections: [{ properties: S.pageProps, ...S.headerFooter(content.header ?? `Credit Analyst 3.0 – ${content.subtitle}: ${content.title}`, `${CLIENT} · Trail Analytics`), children: body }],
+    sections: [{ properties: S.pageProps, ...S.headerFooter(content.header ?? `Credit Analyst 3.0 – ${content.subtitle}: ${content.title}`, `${CLIENT} · ${AUTHOR}`), children: body }],
   })
   const file = path.join(outDir, content.fileName ?? `Credit Analyst 3.0 - ${content.title}.docx`)
   fs.writeFileSync(file, await Packer.toBuffer(doc))

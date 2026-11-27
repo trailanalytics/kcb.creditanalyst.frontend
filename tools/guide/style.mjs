@@ -133,6 +133,25 @@ export function tip(text, label = 'Tip') {
   })
 }
 
+/** A command or a configuration file: Courier New on a grey band, one paragraph per line, spaces kept. */
+export function code(text) {
+  const lines = String(text).replace(/\s+$/, '').split('\n')
+  return new Table({
+    width: { size: 9600, type: WidthType.DXA },
+    columnWidths: [9600],
+    rows: [new TableRow({ cantSplit: lines.length <= 25, children: [new TableCell({
+      children: lines.map((l, i) => new Paragraph({
+        keepNext: i < lines.length - 1 && lines.length <= 25,
+        spacing: { after: 0, line: 230 },
+        children: [new TextRun({ text: l || ' ', font: 'Courier New', size: 15, color: '1F2937' })],
+      })),
+      shading: { type: ShadingType.CLEAR, color: 'auto', fill: 'F3F4F6' },
+      borders: { left: { style: BorderStyle.SINGLE, size: 24, color: '9CA3AF' }, top: nb(), bottom: nb(), right: nb() },
+      margins: { top: 90, bottom: 90, left: 140, right: 100 },
+    })] })],
+  })
+}
+
 /** Size of a PNG from its header. */
 export function pngSize(file) {
   const b = fs.readFileSync(file)
